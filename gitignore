@@ -1,0 +1,18 @@
+# Dependencies — Netlify installs these itself, never commit them.
+# This is the line that prevents the "large file staged" git push failures.
+node_modules/
+
+# Secrets — these live in Netlify's env settings, NEVER in the repo.
+.env
+.env.*
+!.env.example
+
+# Netlify local state
+.netlify/
+
+# Build output (once the Vite frontend is added)
+dist/
+
+# Noise
+*.log
+.DS_Store

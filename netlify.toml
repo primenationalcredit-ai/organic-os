@@ -1,0 +1,9 @@
+# Netlify config for ASAP Organic OS
+# The schedules live inside each function (export const config = { schedule }),
+# so there's nothing to set here for cron — Netlify reads them automatically.
+
+[build]
+  functions = "netlify/functions"
+
+[functions]
+  node_bundler = "esbuild"
