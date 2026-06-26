@@ -5,173 +5,230 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>ASAP Organic OS</title>
 <style>
-  :root {
-    --ink: #0f172a; --muted: #64748b; --line: #e2e8f0;
-    --canvas: #f6f7f9; --card: #ffffff; --amber: #f59e0b;
-    --emerald: #059669; --sky: #0284c7;
-  }
-  * { box-sizing: border-box; }
-  body {
-    margin: 0; background: var(--canvas); color: var(--ink);
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    -webkit-font-smoothing: antialiased;
-  }
-  .wrap { max-width: 880px; margin: 0 auto; padding: 28px 20px 64px; }
+  :root{--ink:#0f172a;--muted:#64748b;--line:#e2e8f0;--canvas:#f6f7f9;--card:#fff;
+    --amber:#f59e0b;--emerald:#059669;--rose:#e11d48;--sky:#0284c7;}
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--canvas);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    -webkit-font-smoothing:antialiased;}
+  .wrap{max-width:920px;margin:0 auto;padding:26px 20px 64px;}
 
-  /* Passcode gate */
-  #gate { max-width: 360px; margin: 18vh auto 0; text-align: center; }
-  #gate h1 { font-size: 20px; margin-bottom: 4px; }
-  #gate p { color: var(--muted); font-size: 14px; margin-top: 0; }
-  #gate input {
-    width: 100%; padding: 12px 14px; font-size: 15px; margin-top: 16px;
-    border: 1px solid var(--line); border-radius: 10px; outline: none;
-  }
-  #gate input:focus { border-color: var(--amber); }
-  #gate button {
-    width: 100%; margin-top: 10px; padding: 12px; font-size: 15px; font-weight: 600;
-    background: var(--ink); color: #fff; border: none; border-radius: 10px; cursor: pointer;
-  }
-  #gate .err { color: #dc2626; font-size: 13px; margin-top: 10px; min-height: 16px; }
+  #gate{max-width:360px;margin:18vh auto 0;text-align:center;}
+  #gate h1{font-size:20px;margin-bottom:4px;}
+  #gate p{color:var(--muted);font-size:14px;margin-top:0;}
+  #gate input{width:100%;padding:12px 14px;font-size:15px;margin-top:16px;border:1px solid var(--line);border-radius:10px;outline:none;}
+  #gate input:focus{border-color:var(--amber);}
+  #gate button{width:100%;margin-top:10px;padding:12px;font-size:15px;font-weight:600;background:var(--ink);color:#fff;border:none;border-radius:10px;cursor:pointer;}
+  #gate .err{color:#dc2626;font-size:13px;margin-top:10px;min-height:16px;}
 
-  /* Header */
-  header { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 22px; }
-  header h1 { font-size: 22px; margin: 0; letter-spacing: -0.02em; }
-  header .sub { color: var(--muted); font-size: 13px; margin-top: 3px; }
-  header .meta { color: var(--muted); font-size: 13px; text-align: right; }
-  header .meta b { color: var(--ink); }
-  .refresh { font-size: 13px; color: var(--sky); cursor: pointer; background: none; border: none; padding: 0; }
+  header{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:18px;}
+  header h1{font-size:22px;margin:0;letter-spacing:-.02em;}
+  header .sub{color:var(--muted);font-size:13px;margin-top:3px;}
+  .refresh{font-size:13px;color:var(--sky);cursor:pointer;background:none;border:none;}
 
-  /* Brief cards */
-  .card {
-    background: var(--card); border: 1px solid var(--line); border-radius: 14px;
-    padding: 18px 20px; margin-bottom: 14px;
-  }
-  .card .top { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
-  .prio {
-    flex: none; width: 26px; height: 26px; border-radius: 8px; background: var(--ink); color: #fff;
-    font-size: 13px; font-weight: 700; display: grid; place-items: center;
-  }
-  .tag { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; padding: 3px 8px; border-radius: 6px; }
-  .tag.expand { background: #ecfdf5; color: var(--emerald); }
-  .tag.write_new { background: #eff6ff; color: var(--sky); }
-  .kw { font-size: 17px; font-weight: 650; margin: 2px 0 8px; letter-spacing: -0.01em; }
-  .stats { display: flex; gap: 18px; font-size: 13px; color: var(--muted); margin-bottom: 12px; flex-wrap: wrap; }
-  .stats b { color: var(--ink); font-variant-numeric: tabular-nums; }
-  .why { font-size: 14px; color: #334155; background: #fffbeb; border-left: 3px solid var(--amber); padding: 8px 12px; border-radius: 0 8px 8px 0; margin-bottom: 12px; }
-  .brief { font-size: 14.5px; line-height: 1.6; color: #1e293b; margin-bottom: 14px; white-space: pre-wrap; }
-  .links { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
-  .chip { font-size: 12px; background: #f1f5f9; color: #475569; padding: 4px 9px; border-radius: 999px; }
-  .cta { font-size: 13.5px; color: var(--ink); border-top: 1px solid var(--line); padding-top: 10px; }
-  .cta span { color: var(--muted); text-transform: uppercase; font-size: 11px; letter-spacing: .04em; font-weight: 700; margin-right: 6px; }
+  .tabs{display:flex;gap:6px;margin-bottom:20px;border-bottom:1px solid var(--line);}
+  .tab{padding:9px 14px;font-size:14px;font-weight:600;color:var(--muted);cursor:pointer;border:none;background:none;border-bottom:2px solid transparent;margin-bottom:-1px;}
+  .tab.active{color:var(--ink);border-bottom-color:var(--amber);}
 
-  .hidden { display: none; }
-  .loading { text-align: center; color: var(--muted); padding: 40px; }
+  .hero{background:linear-gradient(180deg,#fff,#fcfcfd);border:1px solid var(--line);border-radius:14px;padding:20px 22px;margin-bottom:18px;}
+  .hero h2{font-size:15px;margin:0 0 8px;color:var(--amber);text-transform:uppercase;letter-spacing:.05em;}
+  .hero p{font-size:17px;line-height:1.55;margin:0;color:#1e293b;}
+  .hero b{color:var(--ink);font-variant-numeric:tabular-nums;}
+
+  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px;}
+  @media(max-width:640px){.kpis{grid-template-columns:repeat(2,1fr);}}
+  .kpi{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px;}
+  .kpi .label{font-size:12px;color:var(--muted);margin-bottom:6px;}
+  .kpi .val{font-size:24px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-.02em;}
+  .kpi .delta{font-size:12px;font-weight:600;margin-top:3px;}
+  .up{color:var(--emerald);} .down{color:var(--rose);} .flat{color:var(--muted);}
+  .kpi.pending{background:#fafafa;border-style:dashed;}
+  .kpi.pending .val{color:#cbd5e1;font-size:15px;font-weight:600;margin-top:6px;}
+
+  .section{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px 20px;margin-bottom:16px;}
+  .section h2{font-size:15px;margin:0 0 4px;}
+  .section .note{font-size:12px;color:var(--muted);margin:0 0 14px;}
+  .cols{display:grid;grid-template-columns:1fr 1fr;gap:24px;}
+  @media(max-width:640px){.cols{grid-template-columns:1fr;}}
+  .colhead{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin-bottom:8px;}
+  .row{display:flex;justify-content:space-between;gap:12px;padding:7px 0;border-bottom:1px solid #f1f5f9;font-size:13.5px;}
+  .row .p{color:#334155;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .row .d{font-weight:700;font-variant-numeric:tabular-nums;flex:none;}
+  .empty{color:var(--muted);font-size:13px;padding:6px 0;}
+  .opp{padding:10px 0;border-bottom:1px solid #f1f5f9;}
+  .opp .kw{font-size:14px;font-weight:600;}
+  .opp .meta{font-size:12.5px;color:var(--muted);margin-top:2px;}
+
+  /* progress */
+  .progress{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 18px;margin-bottom:16px;display:flex;align-items:center;gap:16px;}
+  .progress .txt{font-size:14px;font-weight:600;flex:none;}
+  .bar{flex:1;height:8px;background:#eef2f7;border-radius:999px;overflow:hidden;}
+  .bar>span{display:block;height:100%;background:var(--emerald);border-radius:999px;transition:width .25s;}
+
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px 20px;margin-bottom:14px;}
+  .card.done{opacity:.62;border-left:3px solid var(--emerald);}
+  .card .top{display:flex;align-items:center;gap:10px;margin-bottom:6px;}
+  .prio{flex:none;width:26px;height:26px;border-radius:8px;background:var(--ink);color:#fff;font-size:13px;font-weight:700;display:grid;place-items:center;}
+  .tag{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:3px 8px;border-radius:6px;}
+  .tag.expand{background:#ecfdf5;color:var(--emerald);} .tag.write_new{background:#eff6ff;color:var(--sky);}
+  .kw{font-size:17px;font-weight:650;margin:2px 0 8px;}
+  .stats{display:flex;gap:18px;font-size:13px;color:var(--muted);margin-bottom:12px;flex-wrap:wrap;}
+  .stats b{color:var(--ink);font-variant-numeric:tabular-nums;}
+  .why{font-size:14px;color:#334155;background:#fffbeb;border-left:3px solid var(--amber);padding:8px 12px;border-radius:0 8px 8px 0;margin-bottom:12px;}
+  .brief{font-size:14.5px;line-height:1.6;color:#1e293b;margin-bottom:14px;white-space:pre-wrap;}
+  .links{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;}
+  .chip{font-size:12px;background:#f1f5f9;color:#475569;padding:4px 9px;border-radius:999px;}
+  .cta{font-size:13.5px;border-top:1px solid var(--line);padding-top:10px;margin-bottom:12px;}
+  .cta span{color:var(--muted);text-transform:uppercase;font-size:11px;letter-spacing:.04em;font-weight:700;margin-right:6px;}
+  .statusbar{display:flex;gap:6px;border-top:1px solid var(--line);padding-top:12px;}
+  .sbtn{font-size:12.5px;font-weight:600;padding:6px 12px;border-radius:8px;border:1px solid var(--line);background:#fff;color:var(--muted);cursor:pointer;}
+  .sbtn.active[data-s="open"]{background:#f1f5f9;color:var(--ink);border-color:#cbd5e1;}
+  .sbtn.active[data-s="doing"]{background:#fff7ed;color:#c2410c;border-color:#fed7aa;}
+  .sbtn.active[data-s="done"]{background:#ecfdf5;color:var(--emerald);border-color:#a7f3d0;}
+
+  .hidden{display:none;} .loading{text-align:center;color:var(--muted);padding:40px;}
 </style>
 </head>
 <body>
 
-<!-- Passcode screen -->
 <div id="gate">
   <h1>ASAP Organic OS</h1>
-  <p>Enter the team passcode to view this week's assignments.</p>
+  <p>Enter the team passcode.</p>
   <input id="pass" type="password" placeholder="Passcode" autocomplete="off" />
-  <button id="enter">View briefs</button>
+  <button id="enter">Open dashboard</button>
   <div class="err" id="err"></div>
 </div>
 
-<!-- App -->
 <div id="app" class="wrap hidden">
   <header>
-    <div>
-      <h1>This week's content assignments</h1>
-      <div class="sub">Ranked by the AI from your live Search Console data</div>
-    </div>
-    <div class="meta">
-      <div>Run: <b id="runDate">—</b></div>
-      <div><b id="count">—</b> assignments</div>
-      <button class="refresh" id="refresh">refresh</button>
-    </div>
+    <div><h1>Organic OS</h1><div class="sub">Live from your Google Search Console data</div></div>
+    <button class="refresh" id="refresh">refresh</button>
   </header>
-  <div id="list"></div>
+  <div class="tabs">
+    <button class="tab active" data-tab="overview">Overview</button>
+    <button class="tab" data-tab="assignments">Assignments</button>
+  </div>
+  <div id="overview"><div class="loading">Loadingâ€¦</div></div>
+  <div id="assignments" class="hidden"><div class="loading">Loadingâ€¦</div></div>
 </div>
 
 <script>
-  const API = "/.netlify/functions/get-briefs";
-  const gate = document.getElementById("gate");
-  const app = document.getElementById("app");
+const DASH="/.netlify/functions/get-dashboard";
+const BRIEFS="/.netlify/functions/get-briefs";
+const UPDATE="/.netlify/functions/update-brief";
+const gate=document.getElementById("gate"), app=document.getElementById("app");
+let pass="", briefsData=[];
 
-  function esc(s) {
-    return String(s ?? "").replace(/[&<>]/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;" }[c]));
-  }
+const esc=s=>String(s??"").replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
+const num=n=>Number(n||0).toLocaleString();
 
-  function render(data) {
-    document.getElementById("runDate").textContent = data.run_date || "—";
-    document.getElementById("count").textContent = data.count ?? data.briefs.length;
-    const list = document.getElementById("list");
-    list.innerHTML = data.briefs.map(b => `
-      <div class="card">
-        <div class="top">
-          <div class="prio">${esc(b.priority)}</div>
-          <span class="tag ${b.action === "expand" ? "expand" : "write_new"}">
-            ${b.action === "expand" ? "Expand page" : "Write new"}
-          </span>
-        </div>
-        <div class="kw">${esc(b.target_keyword)}</div>
-        <div class="stats">
-          <span>Page: <b>${esc(b.page_path)}</b></span>
-          <span>Current rank: <b>${esc(b.current_position)}</b></span>
-          <span>~${esc(b.monthly_impressions)}/mo impressions</span>
-        </div>
-        <div class="why">${esc(b.why)}</div>
-        <div class="brief">${esc(b.brief)}</div>
-        ${Array.isArray(b.internal_links) && b.internal_links.length ? `
-          <div class="links">${b.internal_links.map(l => `<span class="chip">${esc(l)}</span>`).join("")}</div>` : ""}
-        ${b.cta ? `<div class="cta"><span>CTA</span>${esc(b.cta)}</div>` : ""}
-      </div>
-    `).join("");
-  }
+function delta(cur,prev,lowerBetter){
+  cur=Number(cur||0); prev=Number(prev||0);
+  if(!prev) return '<div class="delta flat">no prior week yet</div>';
+  const diff=cur-prev, pct=Math.round(100*diff/prev);
+  const good=lowerBetter?diff<0:diff>0;
+  const cls=diff===0?"flat":good?"up":"down";
+  const arrow=diff===0?"":diff>0?"\u25B2":"\u25BC";
+  return `<div class="delta ${cls}">${arrow} ${Math.abs(pct)}% vs last week</div>`;
+}
 
-  async function load(pass) {
-    const res = await fetch(API + "?pass=" + encodeURIComponent(pass));
-    if (res.status === 401) throw new Error("Wrong passcode");
-    if (!res.ok) throw new Error("Could not load briefs");
-    return res.json();
-  }
+function renderOverview(d){
+  const t=d.totals||{};
+  const opps=d.opportunities||[];
+  const ctr=t.impr_7d?Math.round(1000*t.clicks_7d/t.impr_7d)/10:0;
 
-  async function enter() {
-    const pass = document.getElementById("pass").value.trim();
-    const err = document.getElementById("err");
-    err.textContent = "";
-    try {
-      const data = await load(pass);
-      localStorage.setItem("asap_os_pass", pass);
-      gate.classList.add("hidden");
-      app.classList.remove("hidden");
-      document.getElementById("list").innerHTML = '<div class="loading">Loading…</div>';
-      render(data);
-    } catch (e) {
-      err.textContent = e.message;
-    }
-  }
+  const hero=`<div class="hero"><h2>The opportunity</h2>
+    <p>Your site showed up <b>${num(t.impr_7d)}</b> times in Google this week and earned <b>${num(t.clicks_7d)}</b> clicks â€” a <b>${ctr}%</b> click rate.
+    <b>${opps.length}</b> keywords are already ranking on page 2 and need only one solid push to reach page 1.
+    The Assignments tab below is the exact list of that work, in priority order.</p></div>`;
 
-  document.getElementById("enter").addEventListener("click", enter);
-  document.getElementById("pass").addEventListener("keydown", e => { if (e.key === "Enter") enter(); });
-  document.getElementById("refresh").addEventListener("click", async () => {
-    const pass = localStorage.getItem("asap_os_pass");
-    if (pass) render(await load(pass));
-  });
+  const kpis=`
+    <div class="kpi"><div class="label">Clicks (7d)</div><div class="val">${num(t.clicks_7d)}</div>${delta(t.clicks_7d,t.clicks_prev)}</div>
+    <div class="kpi"><div class="label">Impressions (7d)</div><div class="val">${num(t.impr_7d)}</div>${delta(t.impr_7d,t.impr_prev)}</div>
+    <div class="kpi"><div class="label">Avg position</div><div class="val">${t.pos_7d??"\u2014"}</div>${delta(t.pos_7d,t.pos_prev,true)}</div>
+    <div class="kpi"><div class="label">Opportunities</div><div class="val">${opps.length}</div><div class="delta flat">ranking 4-15</div></div>`;
+  const pending=`
+    <div class="kpi pending"><div class="label">Organic leads</div><div class="val">Connect Pipedrive</div></div>
+    <div class="kpi pending"><div class="label">Organic revenue</div><div class="val">Connect Pipedrive</div></div>
+    <div class="kpi pending"><div class="label">Close rate</div><div class="val">Connect Pipedrive</div></div>
+    <div class="kpi pending"><div class="label">Sessions</div><div class="val">Connect GA4</div></div>`;
 
-  // Auto-login if we already have the passcode saved.
-  (async () => {
-    const saved = localStorage.getItem("asap_os_pass");
-    if (!saved) return;
-    try {
-      const data = await load(saved);
-      gate.classList.add("hidden");
-      app.classList.remove("hidden");
-      render(data);
-    } catch { /* show gate */ }
-  })();
+  const g=d.gainers||[], l=d.losers||[];
+  const hasPrior=(t.clicks_prev||0)>0;
+  const rowsG=g.filter(x=>x.clicks_delta>0).map(x=>`<div class="row"><span class="p">${esc(x.path)}</span><span class="d up">+${num(x.clicks_delta)}</span></div>`).join("")||'<div class="empty">\u2014</div>';
+  const rowsL=l.filter(x=>x.clicks_delta<0).map(x=>`<div class="row"><span class="p">${esc(x.path)}</span><span class="d down">${num(x.clicks_delta)}</span></div>`).join("")||'<div class="empty">\u2014</div>';
+  const changed=`<div class="section"><h2>What changed this week</h2>
+    <p class="note">${hasPrior?"Clicks vs the previous 7 days.":"Week-over-week fills in once two weeks of history are saved \u2014 your daily sync is building it now."}</p>
+    <div class="cols"><div><div class="colhead">Gaining</div>${rowsG}</div><div><div class="colhead">Slipping</div>${rowsL}</div></div></div>`;
+
+  const oppHtml=opps.map(o=>`<div class="opp"><div class="kw">${esc(o.query)}</div>
+    <div class="meta">${esc(o.path)} \u00b7 rank <b>${o.avg_position}</b> \u00b7 ${num(o.impressions)} impressions \u2014 one good push to page 1</div></div>`).join("")||'<div class="empty">No striking-distance keywords yet.</div>';
+
+  document.getElementById("overview").innerHTML=
+    hero+`<div class="kpis">${kpis}</div><div class="kpis">${pending}</div>`+changed+
+    `<div class="section"><h2>Needs improvement \u2014 closest to page 1</h2>
+     <p class="note">Keywords already ranking 4-15. The cheapest traffic wins on the site.</p>${oppHtml}</div>`;
+}
+
+function drawBriefs(){
+  const total=briefsData.length;
+  const done=briefsData.filter(b=>b.status==="done").length;
+  const pct=total?Math.round(100*done/total):0;
+  const bar=`<div class="progress"><div class="txt">${done} of ${total} done</div><div class="bar"><span style="width:${pct}%"></span></div></div>`;
+  const cards=briefsData.map(b=>{
+    const st=b.status||"open";
+    const mk=s=>`<button class="sbtn ${st===s?"active":""}" data-s="${s}" onclick="setStatus('${b.id}','${s}')">${s==="open"?"Open":s==="doing"?"Doing":"Done"}</button>`;
+    return `<div class="card ${st==="done"?"done":""}">
+      <div class="top"><div class="prio">${esc(b.priority)}</div>
+        <span class="tag ${b.action==="expand"?"expand":"write_new"}">${b.action==="expand"?"Expand page":"Write new"}</span></div>
+      <div class="kw">${esc(b.target_keyword)}</div>
+      <div class="stats"><span>Page: <b>${esc(b.page_path)}</b></span><span>Rank: <b>${esc(b.current_position)}</b></span><span>~${num(b.monthly_impressions)}/mo</span></div>
+      <div class="why">${esc(b.why)}</div>
+      <div class="brief">${esc(b.brief)}</div>
+      ${Array.isArray(b.internal_links)&&b.internal_links.length?`<div class="links">${b.internal_links.map(x=>`<span class="chip">${esc(x)}</span>`).join("")}</div>`:""}
+      ${b.cta?`<div class="cta"><span>CTA</span>${esc(b.cta)}</div>`:""}
+      <div class="statusbar">${mk("open")}${mk("doing")}${mk("done")}</div>
+    </div>`;
+  }).join("")||'<div class="empty">No briefs yet.</div>';
+  document.getElementById("assignments").innerHTML=bar+cards;
+}
+
+async function setStatus(id,status){
+  const b=briefsData.find(x=>x.id===id); if(b) b.status=status;
+  drawBriefs();
+  try{ await fetch(UPDATE+"?pass="+encodeURIComponent(pass),{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({id,status})}); }catch(e){}
+}
+
+async function fetchJSON(base){
+  const r=await fetch(base+"?pass="+encodeURIComponent(pass));
+  if(r.status===401) throw new Error("Wrong passcode");
+  if(!r.ok) throw new Error("Load failed");
+  return r.json();
+}
+async function loadAll(){
+  const [dash,briefs]=await Promise.all([fetchJSON(DASH),fetchJSON(BRIEFS)]);
+  renderOverview(dash); briefsData=briefs.briefs||[]; drawBriefs();
+}
+async function enter(){
+  pass=document.getElementById("pass").value.trim();
+  const err=document.getElementById("err"); err.textContent="";
+  try{ await loadAll(); localStorage.setItem("asap_os_pass",pass); gate.classList.add("hidden"); app.classList.remove("hidden"); }
+  catch(e){ err.textContent=e.message; }
+}
+document.getElementById("enter").addEventListener("click",enter);
+document.getElementById("pass").addEventListener("keydown",e=>{if(e.key==="Enter")enter();});
+document.getElementById("refresh").addEventListener("click",loadAll);
+document.querySelectorAll(".tab").forEach(t=>t.addEventListener("click",()=>{
+  document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));
+  t.classList.add("active");
+  const tab=t.dataset.tab;
+  document.getElementById("overview").classList.toggle("hidden",tab!=="overview");
+  document.getElementById("assignments").classList.toggle("hidden",tab!=="assignments");
+}));
+(async()=>{
+  const saved=localStorage.getItem("asap_os_pass"); if(!saved) return; pass=saved;
+  try{ await loadAll(); gate.classList.add("hidden"); app.classList.remove("hidden"); }catch{}
+})();
 </script>
 </body>
 </html>
