@@ -1,11 +1,9 @@
 // ============================================================================
-// netlify/functions/content-brain.mjs
-// Turns your Search Console data into exact blog assignments for the writers.
+// netlify/functions/content-brain-background.mjs
+// Turns Search Console data into exact blog assignments for the writers.
 // Reads gsc_opportunities, asks Claude what to do, writes to content_briefs.
 //
-// Works off GSC data ALONE — no GA4/Pipedrive needed. Run it any time with the
-// "Run now" button, or it runs every Monday 08:00 UTC on its own.
-//
+// Background function (15-min limit). Triggered weekly by content-brain-trigger.
 // Env needed: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, ANTHROPIC_API_KEY
 // ============================================================================
 
@@ -25,7 +23,8 @@ the H2 sections to include, which internal pages to link to, and the call to act
 You lead with the cheapest wins: pages already ranking 4-15 ("striking distance") that
 just need expansion beat writing brand-new articles from scratch. You are revenue-minded:
 a keyword someone searches when they have a charge-off or collection is worth far more
-than an informational term, and you say so. Be concrete and confident.`;
+than an informational term, and you say so. Be concrete and confident, but keep each
+brief tight and scannable — a writer should read it in under a minute.`;
 
 async function buildSnapshot() {
   const { data: striking } = await supabase
@@ -56,7 +55,7 @@ CONTENT GAPS — keywords ranking 15-40. Seen but not winning; may need a strong
 dedicated article:
 ${JSON.stringify(snap.gaps)}
 
-Pick the 12 highest-value opportunities and write a brief for each. Return ONLY a JSON
+Pick the 10 highest-value opportunities and write a brief for each. Return ONLY a JSON
 array (no prose, no markdown fences), highest priority first, each shaped exactly like:
 {
   "priority": 1,
@@ -65,14 +64,38 @@ array (no prose, no markdown fences), highest priority first, each shaped exactl
   "page_path": "/remove-late-payments",
   "current_position": 8.2,
   "monthly_impressions": 1900,
-  "why": "1-2 sentences: the business reason this is worth doing now",
-  "brief": "the actual assignment: the angle, the H2 sections to add, word-count target, what's missing today",
+  "why": "1 sentence: the business reason this is worth doing now",
+  "brief": "3-5 sentences max: the angle, the H2 sections to add, word-count target, what's missing today",
   "internal_links": ["/remove-charge-off", "/remove-collections"],
   "cta": "the specific call to action to place in the article"
 }
 Rules: prefer "expand" over "write_new" when a page already ranks. monthly_impressions
-should be roughly 7x the windowed impressions you see (28-day window). Make every brief
-detailed enough to hand straight to a writer.`;
+should be roughly 7x the windowed impressions you see (28-day window). Keep the "brief"
+field to 3-5 sentences so the whole list stays scannable.`;
+}
+
+// Tough parser: handles clean JSON, and salvages complete briefs if the output
+// was ever cut off mid-stream.
+function parseBriefs(text) {
+  const clean = text.replace(/```json|```/g, "").trim();
+  try {
+    return JSON.parse(clean);
+  } catch {
+    // Truncated mid-object: keep everything up to the last complete object.
+    const cut = clean.lastIndexOf("},");
+    if (cut !== -1) {
+      try {
+        return JSON.parse(clean.slice(0, cut + 1) + "]");
+      } catch {}
+    }
+    const lastBrace = clean.lastIndexOf("}");
+    if (lastBrace !== -1) {
+      try {
+        return JSON.parse(clean.slice(0, lastBrace + 1) + "]");
+      } catch {}
+    }
+    throw new Error("Could not parse briefs JSON even after salvage.");
+  }
 }
 
 async function askClaude(snap) {
@@ -85,7 +108,7 @@ async function askClaude(snap) {
     },
     body: JSON.stringify({
       model: "claude-sonnet-4-6", // bump to claude-opus-4-8 for sharper briefs
-      max_tokens: 8000,
+      max_tokens: 16000, // plenty of room so briefs never truncate
       system: SYSTEM_PROMPT,
       messages: [{ role: "user", content: userPrompt(snap) }],
     }),
@@ -96,21 +119,19 @@ async function askClaude(snap) {
   const text = (data.content || [])
     .filter((b) => b.type === "text")
     .map((b) => b.text)
-    .join("\n")
-    .replace(/```json|```/g, "")
-    .trim();
+    .join("\n");
 
-  return JSON.parse(text);
+  return parseBriefs(text);
 }
 
 export default async () => {
   try {
+    console.log("Content brain started...");
     const snap = await buildSnapshot();
+
     if (snap.striking.length === 0 && snap.gaps.length === 0) {
-      return new Response(
-        JSON.stringify({ ok: false, error: "No opportunities found yet — is GSC data in the table?" }),
-        { status: 200, headers: { "content-type": "application/json" } }
-      );
+      console.log("No opportunities found — is GSC data in the table?");
+      return;
     }
 
     const briefs = await askClaude(snap);
@@ -134,17 +155,7 @@ export default async () => {
     if (error) throw error;
 
     console.log(`Content brain wrote ${rows.length} briefs.`);
-    return new Response(JSON.stringify({ ok: true, briefs: rows.length }), {
-      headers: { "content-type": "application/json" },
-    });
   } catch (err) {
     console.error("Content brain failed:", err.message);
-    return new Response(JSON.stringify({ ok: false, error: err.message }), {
-      status: 500,
-      headers: { "content-type": "application/json" },
-    });
   }
 };
-
-// Every Monday 08:00 UTC — a fresh assignment list waiting each week.
-export const config = { schedule: "0 8 * * 1" };
