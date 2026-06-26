@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ASAP Organic OS</title>
+<style>
+  :root {
+    --ink: #0f172a; --muted: #64748b; --line: #e2e8f0;
+    --canvas: #f6f7f9; --card: #ffffff; --amber: #f59e0b;
+    --emerald: #059669; --sky: #0284c7;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--canvas); color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 880px; margin: 0 auto; padding: 28px 20px 64px; }
+
+  /* Passcode gate */
+  #gate { max-width: 360px; margin: 18vh auto 0; text-align: center; }
+  #gate h1 { font-size: 20px; margin-bottom: 4px; }
+  #gate p { color: var(--muted); font-size: 14px; margin-top: 0; }
+  #gate input {
+    width: 100%; padding: 12px 14px; font-size: 15px; margin-top: 16px;
+    border: 1px solid var(--line); border-radius: 10px; outline: none;
+  }
+  #gate input:focus { border-color: var(--amber); }
+  #gate button {
+    width: 100%; margin-top: 10px; padding: 12px; font-size: 15px; font-weight: 600;
+    background: var(--ink); color: #fff; border: none; border-radius: 10px; cursor: pointer;
+  }
+  #gate .err { color: #dc2626; font-size: 13px; margin-top: 10px; min-height: 16px; }
+
+  /* Header */
+  header { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 22px; }
+  header h1 { font-size: 22px; margin: 0; letter-spacing: -0.02em; }
+  header .sub { color: var(--muted); font-size: 13px; margin-top: 3px; }
+  header .meta { color: var(--muted); font-size: 13px; text-align: right; }
+  header .meta b { color: var(--ink); }
+  .refresh { font-size: 13px; color: var(--sky); cursor: pointer; background: none; border: none; padding: 0; }
+
+  /* Brief cards */
+  .card {
+    background: var(--card); border: 1px solid var(--line); border-radius: 14px;
+    padding: 18px 20px; margin-bottom: 14px;
+  }
+  .card .top { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+  .prio {
+    flex: none; width: 26px; height: 26px; border-radius: 8px; background: var(--ink); color: #fff;
+    font-size: 13px; font-weight: 700; display: grid; place-items: center;
+  }
+  .tag { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; padding: 3px 8px; border-radius: 6px; }
+  .tag.expand { background: #ecfdf5; color: var(--emerald); }
+  .tag.write_new { background: #eff6ff; color: var(--sky); }
+  .kw { font-size: 17px; font-weight: 650; margin: 2px 0 8px; letter-spacing: -0.01em; }
+  .stats { display: flex; gap: 18px; font-size: 13px; color: var(--muted); margin-bottom: 12px; flex-wrap: wrap; }
+  .stats b { color: var(--ink); font-variant-numeric: tabular-nums; }
+  .why { font-size: 14px; color: #334155; background: #fffbeb; border-left: 3px solid var(--amber); padding: 8px 12px; border-radius: 0 8px 8px 0; margin-bottom: 12px; }
+  .brief { font-size: 14.5px; line-height: 1.6; color: #1e293b; margin-bottom: 14px; white-space: pre-wrap; }
+  .links { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+  .chip { font-size: 12px; background: #f1f5f9; color: #475569; padding: 4px 9px; border-radius: 999px; }
+  .cta { font-size: 13.5px; color: var(--ink); border-top: 1px solid var(--line); padding-top: 10px; }
+  .cta span { color: var(--muted); text-transform: uppercase; font-size: 11px; letter-spacing: .04em; font-weight: 700; margin-right: 6px; }
+
+  .hidden { display: none; }
+  .loading { text-align: center; color: var(--muted); padding: 40px; }
+</style>
+</head>
+<body>
+
+<!-- Passcode screen -->
+<div id="gate">
+  <h1>ASAP Organic OS</h1>
+  <p>Enter the team passcode to view this week's assignments.</p>
+  <input id="pass" type="password" placeholder="Passcode" autocomplete="off" />
+  <button id="enter">View briefs</button>
+  <div class="err" id="err"></div>
+</div>
+
+<!-- App -->
+<div id="app" class="wrap hidden">
+  <header>
+    <div>
+      <h1>This week's content assignments</h1>
+      <div class="sub">Ranked by the AI from your live Search Console data</div>
+    </div>
+    <div class="meta">
+      <div>Run: <b id="runDate">—</b></div>
+      <div><b id="count">—</b> assignments</div>
+      <button class="refresh" id="refresh">refresh</button>
+    </div>
+  </header>
+  <div id="list"></div>
+</div>
+
+<script>
+  const API = "/.netlify/functions/get-briefs";
+  const gate = document.getElementById("gate");
+  const app = document.getElementById("app");
+
+  function esc(s) {
+    return String(s ?? "").replace(/[&<>]/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;" }[c]));
+  }
+
+  function render(data) {
+    document.getElementById("runDate").textContent = data.run_date || "—";
+    document.getElementById("count").textContent = data.count ?? data.briefs.length;
+    const list = document.getElementById("list");
+    list.innerHTML = data.briefs.map(b => `
+      <div class="card">
+        <div class="top">
+          <div class="prio">${esc(b.priority)}</div>
+          <span class="tag ${b.action === "expand" ? "expand" : "write_new"}">
+            ${b.action === "expand" ? "Expand page" : "Write new"}
+          </span>
+        </div>
+        <div class="kw">${esc(b.target_keyword)}</div>
+        <div class="stats">
+          <span>Page: <b>${esc(b.page_path)}</b></span>
+          <span>Current rank: <b>${esc(b.current_position)}</b></span>
+          <span>~${esc(b.monthly_impressions)}/mo impressions</span>
+        </div>
+        <div class="why">${esc(b.why)}</div>
+        <div class="brief">${esc(b.brief)}</div>
+        ${Array.isArray(b.internal_links) && b.internal_links.length ? `
+          <div class="links">${b.internal_links.map(l => `<span class="chip">${esc(l)}</span>`).join("")}</div>` : ""}
+        ${b.cta ? `<div class="cta"><span>CTA</span>${esc(b.cta)}</div>` : ""}
+      </div>
+    `).join("");
+  }
+
+  async function load(pass) {
+    const res = await fetch(API + "?pass=" + encodeURIComponent(pass));
+    if (res.status === 401) throw new Error("Wrong passcode");
+    if (!res.ok) throw new Error("Could not load briefs");
+    return res.json();
+  }
+
+  async function enter() {
+    const pass = document.getElementById("pass").value.trim();
+    const err = document.getElementById("err");
+    err.textContent = "";
+    try {
+      const data = await load(pass);
+      localStorage.setItem("asap_os_pass", pass);
+      gate.classList.add("hidden");
+      app.classList.remove("hidden");
+      document.getElementById("list").innerHTML = '<div class="loading">Loading…</div>';
+      render(data);
+    } catch (e) {
+      err.textContent = e.message;
+    }
+  }
+
+  document.getElementById("enter").addEventListener("click", enter);
+  document.getElementById("pass").addEventListener("keydown", e => { if (e.key === "Enter") enter(); });
+  document.getElementById("refresh").addEventListener("click", async () => {
+    const pass = localStorage.getItem("asap_os_pass");
+    if (pass) render(await load(pass));
+  });
+
+  // Auto-login if we already have the passcode saved.
+  (async () => {
+    const saved = localStorage.getItem("asap_os_pass");
+    if (!saved) return;
+    try {
+      const data = await load(saved);
+      gate.classList.add("hidden");
+      app.classList.remove("hidden");
+      render(data);
+    } catch { /* show gate */ }
+  })();
+</script>
+</body>
+</html>
