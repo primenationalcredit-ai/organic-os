@@ -1,7 +1,9 @@
 // ============================================================================
 // netlify/functions/update-brief.mjs
-// Lets the dashboard mark an assignment Open / Doing / Done so the team can
-// track their work. Password-protected; service key stays server-side.
+// Moves an assignment through the workflow:
+//   open -> doing -> submitted -> approved   (or submitted -> changes -> submitted)
+// Also stores the draft link (submitted_url) and the reviewer's note (review_note).
+// Password-protected; service key stays server-side.
 //
 // Env needed: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, DASHBOARD_PASSCODE
 // ============================================================================
@@ -28,15 +30,22 @@ export default async (req) => {
   }
 
   try {
-    const { id, status } = await req.json();
-    if (!["open", "doing", "done"].includes(status)) {
+    const { id, status, submitted_url, review_note } = await req.json();
+    const allowed = ["open", "doing", "submitted", "approved", "changes"];
+    if (!allowed.includes(status)) {
       return new Response(JSON.stringify({ error: "bad status" }), {
         status: 400, headers: { "content-type": "application/json" },
       });
     }
+
+    const patch = { status };
+    if (submitted_url !== undefined) patch.submitted_url = submitted_url;
+    if (review_note !== undefined) patch.review_note = review_note;
+
     const { error } = await supabase
-      .from("content_briefs").update({ status }).eq("id", id);
+      .from("content_briefs").update(patch).eq("id", id);
     if (error) throw error;
+
     return new Response(JSON.stringify({ ok: true }), {
       headers: { "content-type": "application/json" },
     });

@@ -59,14 +59,15 @@
   .opp .kw{font-size:14px;font-weight:600;}
   .opp .meta{font-size:12.5px;color:var(--muted);margin-top:2px;}
 
-  /* progress */
   .progress{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 18px;margin-bottom:16px;display:flex;align-items:center;gap:16px;}
   .progress .txt{font-size:14px;font-weight:600;flex:none;}
   .bar{flex:1;height:8px;background:#eef2f7;border-radius:999px;overflow:hidden;}
   .bar>span{display:block;height:100%;background:var(--emerald);border-radius:999px;transition:width .25s;}
 
   .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px 20px;margin-bottom:14px;}
-  .card.done{opacity:.62;border-left:3px solid var(--emerald);}
+  .card.approved{opacity:.65;border-left:3px solid var(--emerald);}
+  .card.submitted{border-left:3px solid var(--amber);}
+  .card.changes{border-left:3px solid var(--rose);}
   .card .top{display:flex;align-items:center;gap:10px;margin-bottom:6px;}
   .prio{flex:none;width:26px;height:26px;border-radius:8px;background:var(--ink);color:#fff;font-size:13px;font-weight:700;display:grid;place-items:center;}
   .tag{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:3px 8px;border-radius:6px;}
@@ -80,11 +81,20 @@
   .chip{font-size:12px;background:#f1f5f9;color:#475569;padding:4px 9px;border-radius:999px;}
   .cta{font-size:13.5px;border-top:1px solid var(--line);padding-top:10px;margin-bottom:12px;}
   .cta span{color:var(--muted);text-transform:uppercase;font-size:11px;letter-spacing:.04em;font-weight:700;margin-right:6px;}
-  .statusbar{display:flex;gap:6px;border-top:1px solid var(--line);padding-top:12px;}
+
+  .statusbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;border-top:1px solid var(--line);padding-top:12px;}
   .sbtn{font-size:12.5px;font-weight:600;padding:6px 12px;border-radius:8px;border:1px solid var(--line);background:#fff;color:var(--muted);cursor:pointer;}
   .sbtn.active[data-s="open"]{background:#f1f5f9;color:var(--ink);border-color:#cbd5e1;}
   .sbtn.active[data-s="doing"]{background:#fff7ed;color:#c2410c;border-color:#fed7aa;}
-  .sbtn.active[data-s="done"]{background:#ecfdf5;color:var(--emerald);border-color:#a7f3d0;}
+  .sbtn.btnp{background:var(--ink);color:#fff;border-color:var(--ink);}
+  .sbtn.btnok{background:#ecfdf5;color:var(--emerald);border-color:#a7f3d0;}
+  .sbtn.btnno{background:#fff;color:#dc2626;border-color:#fecaca;}
+  .pill{font-size:12px;font-weight:700;padding:5px 11px;border-radius:999px;}
+  .pill.review{background:#fff7ed;color:#c2410c;}
+  .pill.approved{background:#ecfdf5;color:var(--emerald);}
+  .pill.changes{background:#fef2f2;color:#dc2626;}
+  .notebox{font-size:13px;background:#fef2f2;border-left:3px solid #dc2626;padding:8px 12px;border-radius:0 8px 8px 0;margin-bottom:12px;color:#7f1d1d;}
+  .lnk{font-size:13px;color:var(--sky);word-break:break-all;}
 
   .hidden{display:none;} .loading{text-align:center;color:var(--muted);padding:40px;}
 </style>
@@ -108,8 +118,8 @@
     <button class="tab active" data-tab="overview">Overview</button>
     <button class="tab" data-tab="assignments">Assignments</button>
   </div>
-  <div id="overview"><div class="loading">Loadingâ€¦</div></div>
-  <div id="assignments" class="hidden"><div class="loading">Loadingâ€¦</div></div>
+  <div id="overview"><div class="loading">Loading...</div></div>
+  <div id="assignments" class="hidden"><div class="loading">Loading...</div></div>
 </div>
 
 <script>
@@ -119,7 +129,7 @@ const UPDATE="/.netlify/functions/update-brief";
 const gate=document.getElementById("gate"), app=document.getElementById("app");
 let pass="", briefsData=[];
 
-const esc=s=>String(s??"").replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
+const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const num=n=>Number(n||0).toLocaleString();
 
 function delta(cur,prev,lowerBetter){
@@ -136,49 +146,66 @@ function renderOverview(d){
   const t=d.totals||{};
   const opps=d.opportunities||[];
   const ctr=t.impr_7d?Math.round(1000*t.clicks_7d/t.impr_7d)/10:0;
-
   const hero=`<div class="hero"><h2>The opportunity</h2>
-    <p>Your site showed up <b>${num(t.impr_7d)}</b> times in Google this week and earned <b>${num(t.clicks_7d)}</b> clicks â€” a <b>${ctr}%</b> click rate.
-    <b>${opps.length}</b> keywords are already ranking on page 2 and need only one solid push to reach page 1.
-    The Assignments tab below is the exact list of that work, in priority order.</p></div>`;
-
+    <p>Your site showed up <b>${num(t.impr_7d)}</b> times in Google this week and earned <b>${num(t.clicks_7d)}</b> clicks, a <b>${ctr}%</b> click rate.
+    <b>${opps.length}</b> keywords already rank on page 2 and need one push to reach page 1.
+    The Assignments tab is the exact work, in priority order.</p></div>`;
   const kpis=`
     <div class="kpi"><div class="label">Clicks (7d)</div><div class="val">${num(t.clicks_7d)}</div>${delta(t.clicks_7d,t.clicks_prev)}</div>
     <div class="kpi"><div class="label">Impressions (7d)</div><div class="val">${num(t.impr_7d)}</div>${delta(t.impr_7d,t.impr_prev)}</div>
     <div class="kpi"><div class="label">Avg position</div><div class="val">${t.pos_7d??"\u2014"}</div>${delta(t.pos_7d,t.pos_prev,true)}</div>
     <div class="kpi"><div class="label">Opportunities</div><div class="val">${opps.length}</div><div class="delta flat">ranking 4-15</div></div>`;
   const pending=`
-    <div class="kpi pending"><div class="label">Organic leads</div><div class="val">Connect Pipedrive</div></div>
-    <div class="kpi pending"><div class="label">Organic revenue</div><div class="val">Connect Pipedrive</div></div>
-    <div class="kpi pending"><div class="label">Close rate</div><div class="val">Connect Pipedrive</div></div>
-    <div class="kpi pending"><div class="label">Sessions</div><div class="val">Connect GA4</div></div>`;
-
+    <div class="kpi pending"><div class="label">Organic leads</div><div class="val">Connect GA4</div></div>
+    <div class="kpi pending"><div class="label">Calls from blogs</div><div class="val">Connect GA4</div></div>
+    <div class="kpi pending"><div class="label">Form submits</div><div class="val">Connect GA4</div></div>
+    <div class="kpi pending"><div class="label">Health score</div><div class="val">Connect Ahrefs</div></div>`;
   const g=d.gainers||[], l=d.losers||[];
   const hasPrior=(t.clicks_prev||0)>0;
   const rowsG=g.filter(x=>x.clicks_delta>0).map(x=>`<div class="row"><span class="p">${esc(x.path)}</span><span class="d up">+${num(x.clicks_delta)}</span></div>`).join("")||'<div class="empty">\u2014</div>';
   const rowsL=l.filter(x=>x.clicks_delta<0).map(x=>`<div class="row"><span class="p">${esc(x.path)}</span><span class="d down">${num(x.clicks_delta)}</span></div>`).join("")||'<div class="empty">\u2014</div>';
   const changed=`<div class="section"><h2>What changed this week</h2>
-    <p class="note">${hasPrior?"Clicks vs the previous 7 days.":"Week-over-week fills in once two weeks of history are saved \u2014 your daily sync is building it now."}</p>
+    <p class="note">${hasPrior?"Clicks vs the previous 7 days.":"Week-over-week fills in once two weeks of history are saved. Your daily sync is building it now."}</p>
     <div class="cols"><div><div class="colhead">Gaining</div>${rowsG}</div><div><div class="colhead">Slipping</div>${rowsL}</div></div></div>`;
-
   const oppHtml=opps.map(o=>`<div class="opp"><div class="kw">${esc(o.query)}</div>
-    <div class="meta">${esc(o.path)} \u00b7 rank <b>${o.avg_position}</b> \u00b7 ${num(o.impressions)} impressions \u2014 one good push to page 1</div></div>`).join("")||'<div class="empty">No striking-distance keywords yet.</div>';
-
+    <div class="meta">${esc(o.path)} \u00b7 rank <b>${o.avg_position}</b> \u00b7 ${num(o.impressions)} impressions, one push to page 1</div></div>`).join("")||'<div class="empty">No striking-distance keywords yet.</div>';
   document.getElementById("overview").innerHTML=
     hero+`<div class="kpis">${kpis}</div><div class="kpis">${pending}</div>`+changed+
-    `<div class="section"><h2>Needs improvement \u2014 closest to page 1</h2>
+    `<div class="section"><h2>Needs improvement, closest to page 1</h2>
      <p class="note">Keywords already ranking 4-15. The cheapest traffic wins on the site.</p>${oppHtml}</div>`;
+}
+
+function controlsFor(b){
+  const st=b.status||"open";
+  if(st==="submitted"){
+    return `<div class="statusbar"><span class="pill review">Awaiting review</span>`+
+      (b.submitted_url?`<a class="lnk" href="${esc(b.submitted_url)}" target="_blank" rel="noopener">view draft</a>`:"")+
+      `<button class="sbtn btnok" onclick="approve('${b.id}')">Approve</button>`+
+      `<button class="sbtn btnno" onclick="sendBack('${b.id}')">Send back</button></div>`;
+  }
+  if(st==="approved"){
+    return `<div class="statusbar"><span class="pill approved">Approved</span>`+
+      (b.submitted_url?`<a class="lnk" href="${esc(b.submitted_url)}" target="_blank" rel="noopener">view post</a>`:"")+
+      `<button class="sbtn" onclick="setStatus('${b.id}','doing')">Reopen</button></div>`;
+  }
+  if(st==="changes"){
+    return (b.review_note?`<div class="notebox"><b>Changes requested:</b> ${esc(b.review_note)}</div>`:"")+
+      `<div class="statusbar"><span class="pill changes">Changes requested</span>`+
+      `<button class="sbtn btnp" onclick="resubmit('${b.id}')">Re-submit</button></div>`;
+  }
+  const mk=s=>`<button class="sbtn ${st===s?"active":""}" data-s="${s}" onclick="setStatus('${b.id}','${s}')">${s==="open"?"Open":"Doing"}</button>`;
+  return `<div class="statusbar">${mk("open")}${mk("doing")}<button class="sbtn btnp" onclick="submitForReview('${b.id}')">Submit for review</button></div>`;
 }
 
 function drawBriefs(){
   const total=briefsData.length;
-  const done=briefsData.filter(b=>b.status==="done").length;
-  const pct=total?Math.round(100*done/total):0;
-  const bar=`<div class="progress"><div class="txt">${done} of ${total} done</div><div class="bar"><span style="width:${pct}%"></span></div></div>`;
+  const approved=briefsData.filter(b=>b.status==="approved").length;
+  const pct=total?Math.round(100*approved/total):0;
+  const bar=`<div class="progress"><div class="txt">${approved} of ${total} approved</div><div class="bar"><span style="width:${pct}%"></span></div></div>`;
   const cards=briefsData.map(b=>{
     const st=b.status||"open";
-    const mk=s=>`<button class="sbtn ${st===s?"active":""}" data-s="${s}" onclick="setStatus('${b.id}','${s}')">${s==="open"?"Open":s==="doing"?"Doing":"Done"}</button>`;
-    return `<div class="card ${st==="done"?"done":""}">
+    const cls=st==="approved"?"approved":st==="submitted"?"submitted":st==="changes"?"changes":"";
+    return `<div class="card ${cls}">
       <div class="top"><div class="prio">${esc(b.priority)}</div>
         <span class="tag ${b.action==="expand"?"expand":"write_new"}">${b.action==="expand"?"Expand page":"Write new"}</span></div>
       <div class="kw">${esc(b.target_keyword)}</div>
@@ -187,17 +214,23 @@ function drawBriefs(){
       <div class="brief">${esc(b.brief)}</div>
       ${Array.isArray(b.internal_links)&&b.internal_links.length?`<div class="links">${b.internal_links.map(x=>`<span class="chip">${esc(x)}</span>`).join("")}</div>`:""}
       ${b.cta?`<div class="cta"><span>CTA</span>${esc(b.cta)}</div>`:""}
-      <div class="statusbar">${mk("open")}${mk("doing")}${mk("done")}</div>
+      ${controlsFor(b)}
     </div>`;
   }).join("")||'<div class="empty">No briefs yet.</div>';
   document.getElementById("assignments").innerHTML=bar+cards;
 }
 
-async function setStatus(id,status){
-  const b=briefsData.find(x=>x.id===id); if(b) b.status=status;
+async function setStatus(id,status,extra){
+  const b=briefsData.find(x=>x.id===id);
+  if(b){ b.status=status; if(extra){ if("submitted_url" in extra)b.submitted_url=extra.submitted_url; if("review_note" in extra)b.review_note=extra.review_note; } }
   drawBriefs();
-  try{ await fetch(UPDATE+"?pass="+encodeURIComponent(pass),{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({id,status})}); }catch(e){}
+  const body=Object.assign({id,status},extra||{});
+  try{ await fetch(UPDATE+"?pass="+encodeURIComponent(pass),{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(body)}); }catch(e){}
 }
+function submitForReview(id){ const u=prompt("Paste the link to the finished blog (optional):")||""; setStatus(id,"submitted",{submitted_url:u}); }
+function resubmit(id){ const u=prompt("Paste the updated link (optional):")||""; setStatus(id,"submitted",{submitted_url:u}); }
+function sendBack(id){ const n=prompt("What needs to change? The writer will see this note."); if(n===null) return; setStatus(id,"changes",{review_note:n}); }
+function approve(id){ setStatus(id,"approved",{}); }
 
 async function fetchJSON(base){
   const r=await fetch(base+"?pass="+encodeURIComponent(pass));
