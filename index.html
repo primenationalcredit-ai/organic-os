@@ -79,6 +79,11 @@
   .pagerow.keep{border-color:#a7f3d0;background:#f0fdf9;}
   .pagerow .u{word-break:break-all;color:#334155;} .pagerow .pm{flex:none;color:var(--muted);font-variant-numeric:tabular-nums;text-align:right;}
   .action{font-size:13.5px;color:#334155;background:#f8fafc;border:1px solid var(--line);border-radius:9px;padding:10px 12px;margin-top:10px;line-height:1.5;}
+  .livebox{background:#f8fafc;border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:12px;}
+  .livehead{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin-bottom:6px;display:flex;justify-content:space-between;align-items:center;gap:8px;}
+  .livemetrics{display:flex;gap:16px;flex-wrap:wrap;font-size:13px;color:#334155;}
+  .livemetrics b{color:var(--ink);font-variant-numeric:tabular-nums;}
+  .livemetrics .up{color:var(--emerald);font-weight:600;} .livemetrics .down{color:var(--rose);font-weight:600;}
   .modal{position:fixed;inset:0;background:rgba(15,23,42,.5);display:flex;align-items:flex-start;justify-content:center;padding:40px 16px;overflow-y:auto;z-index:50;}
   .modalbox{background:#fff;border-radius:16px;max-width:640px;width:100%;padding:24px;position:relative;}
   .modalx{position:absolute;top:10px;right:14px;background:none;border:none;font-size:24px;color:var(--muted);cursor:pointer;line-height:1;}
@@ -156,6 +161,28 @@ function renderMerge(d){
   }).join("");
   document.getElementById("merge").innerHTML=intro+cards;
 }
+function trendArrow(cur,prev,lowerBetter){
+  cur=Number(cur||0);prev=Number(prev||0);
+  if(!prev)return "";
+  const diff=cur-prev;if(diff===0)return "";
+  const good=lowerBetter?diff<0:diff>0,pct=Math.round(100*Math.abs(diff)/prev),arrow=lowerBetter?(diff<0?"\u25B2":"\u25BC"):(diff>0?"\u25B2":"\u25BC");
+  return ` <span class="${good?'up':'down'}">${arrow}${pct}%</span>`;
+}
+function liveStrip(b){
+  const m=b.metrics;
+  const link=(m&&m.page)?m.page:("https://www.asapcreditrepairusa.com"+(b.page_path||""));
+  const head=`<div class="livehead"><span>Live data</span><a class="lnk" href="${esc(link)}" target="_blank" rel="noopener">view live page \u2192</a></div>`;
+  if(!m||(!m.impr_cur&&!m.clicks_cur)){
+    return `<div class="livebox">${head}<div class="empty" style="padding:2px 0">No Search Console data for this page yet. It builds as the daily sync runs.</div></div>`;
+  }
+  const ctr=m.impr_cur?Math.round(1000*m.clicks_cur/m.impr_cur)/10:0;
+  return `<div class="livebox">${head}<div class="livemetrics">`+
+    `<span><b>${num(m.clicks_cur)}</b> clicks${trendArrow(m.clicks_cur,m.clicks_prev,false)}</span>`+
+    `<span><b>${num(m.impr_cur)}</b> impressions${trendArrow(m.impr_cur,m.impr_prev,false)}</span>`+
+    `<span>position <b>${m.pos_cur??"\u2014"}</b>${trendArrow(m.pos_cur,m.pos_prev,true)}</span>`+
+    `<span>CTR <b>${ctr}%</b></span>`+
+    `</div></div>`;
+}
 function controlsFor(b){
   const st=b.status||"open",iv=`<button class="sbtn btnai" onclick="openInterview('${b.id}')">Interview me</button>`;
   if(st==="submitted")return `<div class="statusbar"><span class="pill review">Awaiting review</span>`+(b.submitted_url?`<a class="lnk" href="${esc(b.submitted_url)}" target="_blank" rel="noopener">view draft</a>`:"")+`<button class="sbtn btnok" onclick="approve('${b.id}')">Approve</button><button class="sbtn btnno" onclick="sendBack('${b.id}')">Send back</button></div>`;
@@ -169,7 +196,7 @@ function drawBriefs(){
   const bar=`<div class="progress"><div class="txt">${approved} of ${total} approved</div><div class="bar"><span style="width:${pct}%"></span></div></div>`;
   const cards=briefsData.map(b=>{const st=b.status||"open",cls=st==="approved"?"approved":st==="submitted"?"submitted":st==="changes"?"changes":"";
     const sh=Array.isArray(b.steps)&&b.steps.length?`<div class="stepshead">Do these steps</div><ol class="steps">${b.steps.map(s=>`<li>${esc(s)}</li>`).join("")}</ol>`:`<div class="brief">${esc(b.brief)}</div>`;
-    return `<div class="card ${cls}"><div class="top"><div class="prio">${esc(b.priority)}</div><span class="tag ${b.action==="expand"?"expand":"write_new"}">${b.action==="expand"?"Expand page":"Write new"}</span></div><div class="kw">${esc(b.target_keyword)}</div><div class="stats"><span>Page: <b>${esc(b.page_path)}</b></span><span>Rank: <b>${esc(b.current_position)}</b></span><span>~${num(b.monthly_impressions)}/mo</span></div><div class="why">${esc(b.why)}</div>${sh}${Array.isArray(b.internal_links)&&b.internal_links.length?`<div class="links">${b.internal_links.map(x=>`<span class="chip">${esc(x)}</span>`).join("")}</div>`:""}${b.cta?`<div class="cta"><span>CTA</span>${esc(b.cta)}</div>`:""}${controlsFor(b)}</div>`;
+    return `<div class="card ${cls}"><div class="top"><div class="prio">${esc(b.priority)}</div><span class="tag ${b.action==="expand"?"expand":"write_new"}">${b.action==="expand"?"Expand page":"Write new"}</span></div><div class="kw">${esc(b.target_keyword)}</div><div class="stats"><span>Page: <b>${esc(b.page_path)}</b></span><span>Rank: <b>${esc(b.current_position)}</b></span><span>~${num(b.monthly_impressions)}/mo</span></div>${liveStrip(b)}<div class="why">${esc(b.why)}</div>${sh}${Array.isArray(b.internal_links)&&b.internal_links.length?`<div class="links">${b.internal_links.map(x=>`<span class="chip">${esc(x)}</span>`).join("")}</div>`:""}${b.cta?`<div class="cta"><span>CTA</span>${esc(b.cta)}</div>`:""}${controlsFor(b)}</div>`;
   }).join("")||'<div class="empty">No briefs yet. Run the content brain to generate this week\u2019s list.</div>';
   document.getElementById("assignments").innerHTML=bar+cards;
 }
