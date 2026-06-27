@@ -21,7 +21,7 @@ export default async (req) => {
   if (url.searchParams.get("pass") !== process.env.DASHBOARD_PASSCODE)
     return new Response(JSON.stringify({ error: "unauthorized" }), { status: 401, headers: { "content-type": "application/json" } });
 
-  const out = { sa_email: process.env.GOOGLE_SA_EMAIL || null };
+  const out = { version: "events-v2", sa_email: process.env.GOOGLE_SA_EMAIL || null };
   try {
     const auth = gauth();
     const admin = google.analyticsadmin({ version: "v1beta", auth });
