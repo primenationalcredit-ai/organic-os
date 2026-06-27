@@ -105,28 +105,43 @@
   <div class="tabs">
     <button class="tab active" data-tab="overview">Overview</button>
     <button class="tab" data-tab="trends">Trends</button>
+    <button class="tab" data-tab="leads">Leads</button>
     <button class="tab" data-tab="problems">Problems</button>
     <button class="tab" data-tab="merge">Merge</button>
     <button class="tab" data-tab="assignments">Assignments</button>
   </div>
   <div id="overview"><div class="loading">Loading...</div></div>
   <div id="trends" class="hidden"><div class="loading">Loading...</div></div>
+  <div id="leads" class="hidden"><div class="loading">Loading...</div></div>
   <div id="problems" class="hidden"><div class="loading">Loading...</div></div>
   <div id="merge" class="hidden"><div class="loading">Loading...</div></div>
   <div id="assignments" class="hidden"><div class="loading">Loading...</div></div>
 </div>
 <div id="modal" class="modal hidden"><div class="modalbox"><button class="modalx" onclick="closeModal()">&times;</button><div id="modalbody"></div></div></div>
 <script>
-const DASH="/.netlify/functions/get-dashboard",BRIEFS="/.netlify/functions/get-briefs",PROBLEMS="/.netlify/functions/get-problems",MERGE="/.netlify/functions/get-cannibalization",TRENDS="/.netlify/functions/get-trends",UPDATE="/.netlify/functions/update-brief";
+const DASH="/.netlify/functions/get-dashboard",BRIEFS="/.netlify/functions/get-briefs",PROBLEMS="/.netlify/functions/get-problems",MERGE="/.netlify/functions/get-cannibalization",TRENDS="/.netlify/functions/get-trends",LEADS="/.netlify/functions/get-leads",UPDATE="/.netlify/functions/update-brief";
 const INTERVIEWQ="/.netlify/functions/interview-questions",GENDRAFT="/.netlify/functions/generate-draft-background",GETDRAFT="/.netlify/functions/get-draft";
 const REWRITE="/.netlify/functions/rewrite-page-background",GETREWRITE="/.netlify/functions/get-rewrite";
-const TABS=["overview","trends","problems","merge","assignments"];
+const TABS=["overview","leads","trends","problems","merge","assignments"];
 const gate=document.getElementById("gate"),app=document.getElementById("app");
 let pass="",briefsData=[],interviewBrief=null,interviewQs=[],pollTimer=null,rewriteBrief=null;
 const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const num=n=>Number(n||0).toLocaleString();
 const short=u=>{try{const x=new URL(u);return x.pathname||u;}catch(e){return u;}};
 function delta(cur,prev,lb){cur=Number(cur||0);prev=Number(prev||0);if(!prev)return '<div class="delta flat">no prior week yet</div>';const diff=cur-prev,pct=Math.round(100*diff/prev),good=lb?diff<0:diff>0,cls=diff===0?"flat":good?"up":"down",a=diff===0?"":diff>0?"\u25B2":"\u25BC";return `<div class="delta ${cls}">${a} ${Math.abs(pct)}% vs last week</div>`;}
+function renderLeads(d){
+  const host=document.getElementById("leads");
+  const rows=d.leads||[];
+  if(!rows.length){const e=d.sync_status&&d.sync_status.error;host.innerHTML='<div class="section"><h2>Leads by page</h2><p class="note">'+(e?("Sync error: "+esc(e)):"No leads data yet. Trigger the GA4 sync, then refresh.")+'</p></div>';return;}
+  const kpis=`<div class="kpis"><div class="kpi"><div class="label">Organic leads (28d)</div><div class="val">${num(d.total_leads)}</div><div class="delta up">completed forms + lead events</div></div><div class="kpi"><div class="label">Sessions (28d)</div><div class="val">${num(d.total_sessions)}</div><div class="delta flat">landing sessions</div></div><div class="kpi"><div class="label">Lead rate</div><div class="val">${d.lead_rate}%</div><div class="delta flat">leads per session</div></div><div class="kpi pending"><div class="label">Sales</div><div class="val">Pipedrive next</div></div></div>`;
+  const producers=rows.filter(r=>(r.leads||0)>0).slice(0,30);
+  const prodRows=producers.map(r=>{const rate=r.sessions?Math.round(1000*r.leads/r.sessions)/10:0;return `<div class="row"><span class="p">${esc(r.path)}</span><span class="d"><span style="color:var(--emerald)">${num(r.leads)} leads</span> &middot; ${num(r.sessions)} sess &middot; ${rate}%</span></div>`;}).join("")||'<div class="empty">No pages with leads yet.</div>';
+  const leak=rows.filter(r=>(r.leads||0)===0&&(r.sessions||0)>=20).sort((a,b)=>(b.sessions||0)-(a.sessions||0)).slice(0,20);
+  const leakRows=leak.map(r=>`<div class="row"><span class="p">${esc(r.path)}</span><span class="d">${num(r.sessions)} sessions &middot; <span style="color:var(--rose)">0 leads</span></span></div>`).join("")||'<div class="empty">Nothing notable. Most trafficked pages are converting.</div>';
+  host.innerHTML=kpis
+    +`<div class="section"><h2>Top lead-producing pages</h2><p class="note">Pages turning organic visits into leads, last 28 days. This is what the content is for.</p>${prodRows}</div>`
+    +`<div class="section"><h2>High traffic, no leads yet</h2><p class="note">These pages get real visits but produce no leads. Prime spots to add a clear call to action.</p>${leakRows}</div>`;
+}
 function renderTrends(d){
   const months=(d.months||[]);
   const host=document.getElementById("trends");
@@ -259,7 +274,7 @@ async function rewritePage(id){
 function pollRewrite(){if(pollTimer)clearInterval(pollTimer);pollTimer=setInterval(async()=>{try{const r=await fetch(GETREWRITE+"?id="+encodeURIComponent(rewriteBrief)+"&pass="+encodeURIComponent(pass));const d=await r.json();if(d.rewrite_status==="ready"&&d.rewrite){clearInterval(pollTimer);pollTimer=null;showRewrite(d.rewrite);}else if(d.rewrite_status==="error"){clearInterval(pollTimer);pollTimer=null;showModal('<div class="empty">The rewrite failed. The page may block bots. Close and try again.</div>');}}catch(e){}},4000);}
 function showRewrite(text){showModal(`<h3>Rewritten page</h3><p class="msub">A stronger version of your live page. Review it, add the real ASAP touch and images, then publish.</p><textarea id="draftbox" rows="20" readonly>${esc(text)}</textarea><div style="display:flex;gap:8px;margin-top:12px"><button class="sbtn btnp" onclick="copyDraft()">Copy</button><button class="sbtn" onclick="closeModal()">Close</button></div>`);}
 async function fetchJSON(base){const r=await fetch(base+"?pass="+encodeURIComponent(pass));if(r.status===401)throw new Error("Wrong passcode");if(!r.ok)throw new Error("Load failed");return r.json();}
-async function loadAll(){const[dash,briefs,problems,merge,trends]=await Promise.all([fetchJSON(DASH),fetchJSON(BRIEFS),fetchJSON(PROBLEMS),fetchJSON(MERGE),fetchJSON(TRENDS)]);renderOverview(dash);briefsData=briefs.briefs||[];drawBriefs();renderProblems(problems);renderMerge(merge);renderTrends(trends);}
+async function loadAll(){const[dash,briefs,problems,merge,trends,leads]=await Promise.all([fetchJSON(DASH),fetchJSON(BRIEFS),fetchJSON(PROBLEMS),fetchJSON(MERGE),fetchJSON(TRENDS),fetchJSON(LEADS)]);renderOverview(dash);briefsData=briefs.briefs||[];drawBriefs();renderProblems(problems);renderMerge(merge);renderTrends(trends);renderLeads(leads);}
 async function enter(){pass=document.getElementById("pass").value.trim();const err=document.getElementById("err");err.textContent="";try{await loadAll();localStorage.setItem("asap_os_pass",pass);gate.classList.add("hidden");app.classList.remove("hidden");}catch(e){err.textContent=e.message;}}
 document.getElementById("enter").addEventListener("click",enter);
 document.getElementById("pass").addEventListener("keydown",e=>{if(e.key==="Enter")enter();});
