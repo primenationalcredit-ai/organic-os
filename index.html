@@ -8,11 +8,8 @@
   :root{--ink:#0f172a;--muted:#64748b;--line:#e2e8f0;--canvas:#f6f7f9;--card:#fff;
     --amber:#f59e0b;--emerald:#059669;--rose:#e11d48;--sky:#0284c7;}
   *{box-sizing:border-box;}
-  body{margin:0;background:var(--canvas);color:var(--ink);
-    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
-    -webkit-font-smoothing:antialiased;}
+  body{margin:0;background:var(--canvas);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased;}
   .wrap{max-width:920px;margin:0 auto;padding:26px 20px 64px;}
-
   #gate{max-width:360px;margin:18vh auto 0;text-align:center;}
   #gate h1{font-size:20px;margin-bottom:4px;}
   #gate p{color:var(--muted);font-size:14px;margin-top:0;}
@@ -20,21 +17,17 @@
   #gate input:focus{border-color:var(--amber);}
   #gate button{width:100%;margin-top:10px;padding:12px;font-size:15px;font-weight:600;background:var(--ink);color:#fff;border:none;border-radius:10px;cursor:pointer;}
   #gate .err{color:#dc2626;font-size:13px;margin-top:10px;min-height:16px;}
-
   header{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:18px;}
   header h1{font-size:22px;margin:0;letter-spacing:-.02em;}
   header .sub{color:var(--muted);font-size:13px;margin-top:3px;}
   .refresh{font-size:13px;color:var(--sky);cursor:pointer;background:none;border:none;}
-
   .tabs{display:flex;gap:6px;margin-bottom:20px;border-bottom:1px solid var(--line);}
   .tab{padding:9px 14px;font-size:14px;font-weight:600;color:var(--muted);cursor:pointer;border:none;background:none;border-bottom:2px solid transparent;margin-bottom:-1px;}
   .tab.active{color:var(--ink);border-bottom-color:var(--amber);}
-
   .hero{background:linear-gradient(180deg,#fff,#fcfcfd);border:1px solid var(--line);border-radius:14px;padding:20px 22px;margin-bottom:18px;}
   .hero h2{font-size:15px;margin:0 0 8px;color:var(--amber);text-transform:uppercase;letter-spacing:.05em;}
   .hero p{font-size:17px;line-height:1.55;margin:0;color:#1e293b;}
   .hero b{color:var(--ink);font-variant-numeric:tabular-nums;}
-
   .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px;}
   @media(max-width:640px){.kpis{grid-template-columns:repeat(2,1fr);}}
   .kpi{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px;}
@@ -44,7 +37,6 @@
   .up{color:var(--emerald);} .down{color:var(--rose);} .flat{color:var(--muted);}
   .kpi.pending{background:#fafafa;border-style:dashed;}
   .kpi.pending .val{color:#cbd5e1;font-size:15px;font-weight:600;margin-top:6px;}
-
   .section{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px 20px;margin-bottom:16px;}
   .section h2{font-size:15px;margin:0 0 4px;}
   .section .note{font-size:12px;color:var(--muted);margin:0 0 14px;}
@@ -58,49 +50,52 @@
   .opp{padding:10px 0;border-bottom:1px solid #f1f5f9;}
   .opp .kw{font-size:14px;font-weight:600;}
   .opp .meta{font-size:12.5px;color:var(--muted);margin-top:2px;}
-
   .progress{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 18px;margin-bottom:16px;display:flex;align-items:center;gap:16px;}
   .progress .txt{font-size:14px;font-weight:600;flex:none;}
   .bar{flex:1;height:8px;background:#eef2f7;border-radius:999px;overflow:hidden;}
   .bar>span{display:block;height:100%;background:var(--emerald);border-radius:999px;transition:width .25s;}
-
+  .health{display:flex;align-items:center;gap:18px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px 20px;margin-bottom:16px;}
+  .hscore{font-size:38px;font-weight:800;min-width:84px;height:84px;border-radius:16px;display:grid;place-items:center;color:#fff;font-variant-numeric:tabular-nums;}
+  .hscore.good{background:var(--emerald);} .hscore.mid{background:var(--amber);} .hscore.bad{background:var(--rose);}
+  .hlabel{font-size:13px;color:var(--muted);} .hsub{font-size:14px;margin-top:4px;color:#334155;} .hsub b{font-variant-numeric:tabular-nums;}
   .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px 20px;margin-bottom:14px;}
   .card.approved{opacity:.65;border-left:3px solid var(--emerald);}
   .card.submitted{border-left:3px solid var(--amber);}
   .card.changes{border-left:3px solid var(--rose);}
-  .card .top{display:flex;align-items:center;gap:10px;margin-bottom:6px;}
+  .card .top{display:flex;align-items:center;gap:10px;margin-bottom:6px;flex-wrap:wrap;}
   .prio{flex:none;width:26px;height:26px;border-radius:8px;background:var(--ink);color:#fff;font-size:13px;font-weight:700;display:grid;place-items:center;}
   .tag{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:3px 8px;border-radius:6px;}
   .tag.expand{background:#ecfdf5;color:var(--emerald);} .tag.write_new{background:#eff6ff;color:var(--sky);}
+  .impbadge{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:3px 8px;border-radius:6px;}
+  .impbadge.error{background:#fef2f2;color:#dc2626;} .impbadge.warning{background:#fff7ed;color:#c2410c;} .impbadge.notice{background:#f1f5f9;color:#475569;}
+  .cat{font-size:12px;color:var(--muted);}
   .kw{font-size:17px;font-weight:650;margin:2px 0 8px;}
   .stats{display:flex;gap:18px;font-size:13px;color:var(--muted);margin-bottom:12px;flex-wrap:wrap;}
   .stats b{color:var(--ink);font-variant-numeric:tabular-nums;}
-  .why{font-size:14px;color:#334155;background:#fffbeb;border-left:3px solid var(--amber);padding:8px 12px;border-radius:0 8px 8px 0;margin-bottom:12px;}
+  .why{font-size:14px;color:#334155;background:#fffbeb;border-left:3px solid var(--amber);padding:8px 12px;border-radius:0 8px 8px 0;margin-bottom:14px;}
+  .stepshead{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin-bottom:8px;}
+  ol.steps{margin:0 0 14px;padding-left:0;list-style:none;counter-reset:s;}
+  ol.steps li{position:relative;padding:8px 0 8px 38px;font-size:14.5px;line-height:1.5;color:#1e293b;border-bottom:1px solid #f6f7f9;counter-increment:s;}
+  ol.steps li:before{content:counter(s);position:absolute;left:0;top:7px;width:24px;height:24px;background:var(--ink);color:#fff;border-radius:7px;font-size:12px;font-weight:700;display:grid;place-items:center;}
   .brief{font-size:14.5px;line-height:1.6;color:#1e293b;margin-bottom:14px;white-space:pre-wrap;}
   .links{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;}
   .chip{font-size:12px;background:#f1f5f9;color:#475569;padding:4px 9px;border-radius:999px;}
   .cta{font-size:13.5px;border-top:1px solid var(--line);padding-top:10px;margin-bottom:12px;}
   .cta span{color:var(--muted);text-transform:uppercase;font-size:11px;letter-spacing:.04em;font-weight:700;margin-right:6px;}
-
   .statusbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;border-top:1px solid var(--line);padding-top:12px;}
-  .sbtn{font-size:12.5px;font-weight:600;padding:6px 12px;border-radius:8px;border:1px solid var(--line);background:#fff;color:var(--muted);cursor:pointer;}
-  .sbtn.active[data-s="open"]{background:#f1f5f9;color:var(--ink);border-color:#cbd5e1;}
-  .sbtn.active[data-s="doing"]{background:#fff7ed;color:#c2410c;border-color:#fed7aa;}
+  .sbtn{font-size:12.5px;font-weight:600;padding:7px 14px;border-radius:8px;border:1px solid var(--line);background:#fff;color:var(--muted);cursor:pointer;}
   .sbtn.btnp{background:var(--ink);color:#fff;border-color:var(--ink);}
   .sbtn.btnok{background:#ecfdf5;color:var(--emerald);border-color:#a7f3d0;}
   .sbtn.btnno{background:#fff;color:#dc2626;border-color:#fecaca;}
   .pill{font-size:12px;font-weight:700;padding:5px 11px;border-radius:999px;}
-  .pill.review{background:#fff7ed;color:#c2410c;}
-  .pill.approved{background:#ecfdf5;color:var(--emerald);}
-  .pill.changes{background:#fef2f2;color:#dc2626;}
+  .pill.todo{background:#f1f5f9;color:#475569;} .pill.doing{background:#fff7ed;color:#c2410c;} .pill.review{background:#fff7ed;color:#c2410c;}
+  .pill.approved{background:#ecfdf5;color:var(--emerald);} .pill.changes{background:#fef2f2;color:#dc2626;}
   .notebox{font-size:13px;background:#fef2f2;border-left:3px solid #dc2626;padding:8px 12px;border-radius:0 8px 8px 0;margin-bottom:12px;color:#7f1d1d;}
   .lnk{font-size:13px;color:var(--sky);word-break:break-all;}
-
   .hidden{display:none;} .loading{text-align:center;color:var(--muted);padding:40px;}
 </style>
 </head>
 <body>
-
 <div id="gate">
   <h1>ASAP Organic OS</h1>
   <p>Enter the team passcode.</p>
@@ -108,48 +103,44 @@
   <button id="enter">Open dashboard</button>
   <div class="err" id="err"></div>
 </div>
-
 <div id="app" class="wrap hidden">
   <header>
-    <div><h1>Organic OS</h1><div class="sub">Live from your Google Search Console data</div></div>
+    <div><h1>Organic OS</h1><div class="sub">Live from Search Console + Ahrefs</div></div>
     <button class="refresh" id="refresh">refresh</button>
   </header>
   <div class="tabs">
     <button class="tab active" data-tab="overview">Overview</button>
+    <button class="tab" data-tab="problems">Problems</button>
     <button class="tab" data-tab="assignments">Assignments</button>
   </div>
   <div id="overview"><div class="loading">Loading...</div></div>
+  <div id="problems" class="hidden"><div class="loading">Loading...</div></div>
   <div id="assignments" class="hidden"><div class="loading">Loading...</div></div>
 </div>
-
 <script>
 const DASH="/.netlify/functions/get-dashboard";
 const BRIEFS="/.netlify/functions/get-briefs";
+const PROBLEMS="/.netlify/functions/get-problems";
 const UPDATE="/.netlify/functions/update-brief";
+const TABS=["overview","problems","assignments"];
 const gate=document.getElementById("gate"), app=document.getElementById("app");
 let pass="", briefsData=[];
-
 const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const num=n=>Number(n||0).toLocaleString();
-
 function delta(cur,prev,lowerBetter){
   cur=Number(cur||0); prev=Number(prev||0);
   if(!prev) return '<div class="delta flat">no prior week yet</div>';
   const diff=cur-prev, pct=Math.round(100*diff/prev);
-  const good=lowerBetter?diff<0:diff>0;
-  const cls=diff===0?"flat":good?"up":"down";
+  const good=lowerBetter?diff<0:diff>0; const cls=diff===0?"flat":good?"up":"down";
   const arrow=diff===0?"":diff>0?"\u25B2":"\u25BC";
   return `<div class="delta ${cls}">${arrow} ${Math.abs(pct)}% vs last week</div>`;
 }
-
 function renderOverview(d){
-  const t=d.totals||{};
-  const opps=d.opportunities||[];
+  const t=d.totals||{}; const opps=d.opportunities||[];
   const ctr=t.impr_7d?Math.round(1000*t.clicks_7d/t.impr_7d)/10:0;
   const hero=`<div class="hero"><h2>The opportunity</h2>
     <p>Your site showed up <b>${num(t.impr_7d)}</b> times in Google this week and earned <b>${num(t.clicks_7d)}</b> clicks, a <b>${ctr}%</b> click rate.
-    <b>${opps.length}</b> keywords already rank on page 2 and need one push to reach page 1.
-    The Assignments tab is the exact work, in priority order.</p></div>`;
+    <b>${opps.length}</b> keywords already rank on page 2 and need one push to reach page 1.</p></div>`;
   const kpis=`
     <div class="kpi"><div class="label">Clicks (7d)</div><div class="val">${num(t.clicks_7d)}</div>${delta(t.clicks_7d,t.clicks_prev)}</div>
     <div class="kpi"><div class="label">Impressions (7d)</div><div class="val">${num(t.impr_7d)}</div>${delta(t.impr_7d,t.impr_prev)}</div>
@@ -158,23 +149,44 @@ function renderOverview(d){
   const pending=`
     <div class="kpi pending"><div class="label">Organic leads</div><div class="val">Connect GA4</div></div>
     <div class="kpi pending"><div class="label">Calls from blogs</div><div class="val">Connect GA4</div></div>
-    <div class="kpi pending"><div class="label">Form submits</div><div class="val">Connect GA4</div></div>
-    <div class="kpi pending"><div class="label">Health score</div><div class="val">Connect Ahrefs</div></div>`;
-  const g=d.gainers||[], l=d.losers||[];
-  const hasPrior=(t.clicks_prev||0)>0;
+    <div class="kpi pending"><div class="label">Competitors</div><div class="val">Coming next</div></div>
+    <div class="kpi pending"><div class="label">Health score</div><div class="val">See Problems tab</div></div>`;
+  const g=d.gainers||[], l=d.losers||[]; const hasPrior=(t.clicks_prev||0)>0;
   const rowsG=g.filter(x=>x.clicks_delta>0).map(x=>`<div class="row"><span class="p">${esc(x.path)}</span><span class="d up">+${num(x.clicks_delta)}</span></div>`).join("")||'<div class="empty">\u2014</div>';
   const rowsL=l.filter(x=>x.clicks_delta<0).map(x=>`<div class="row"><span class="p">${esc(x.path)}</span><span class="d down">${num(x.clicks_delta)}</span></div>`).join("")||'<div class="empty">\u2014</div>';
   const changed=`<div class="section"><h2>What changed this week</h2>
-    <p class="note">${hasPrior?"Clicks vs the previous 7 days.":"Week-over-week fills in once two weeks of history are saved. Your daily sync is building it now."}</p>
+    <p class="note">${hasPrior?"Clicks vs the previous 7 days.":"Week-over-week fills in once two weeks of history are saved."}</p>
     <div class="cols"><div><div class="colhead">Gaining</div>${rowsG}</div><div><div class="colhead">Slipping</div>${rowsL}</div></div></div>`;
   const oppHtml=opps.map(o=>`<div class="opp"><div class="kw">${esc(o.query)}</div>
     <div class="meta">${esc(o.path)} \u00b7 rank <b>${o.avg_position}</b> \u00b7 ${num(o.impressions)} impressions, one push to page 1</div></div>`).join("")||'<div class="empty">No striking-distance keywords yet.</div>';
   document.getElementById("overview").innerHTML=
     hero+`<div class="kpis">${kpis}</div><div class="kpis">${pending}</div>`+changed+
     `<div class="section"><h2>Needs improvement, closest to page 1</h2>
-     <p class="note">Keywords already ranking 4-15. The cheapest traffic wins on the site.</p>${oppHtml}</div>`;
+     <p class="note">Keywords already ranking 4-15.</p>${oppHtml}</div>`;
 }
-
+function renderProblems(d){
+  const h=d.health||{}; const score=(h.health_score??null);
+  const cls=score==null?"mid":score>=80?"good":score>=50?"mid":"bad";
+  const healthCard=`<div class="health">
+    <div class="hscore ${cls}">${score??"\u2014"}</div>
+    <div><div class="hlabel">Site health score</div>
+    <div class="hsub"><b>${num(h.errors)}</b> errors \u00b7 <b>${num(h.warnings)}</b> warnings \u00b7 <b>${num(h.notices)}</b> notices across ${num(h.total)} pages</div></div></div>`;
+  const issues=d.issues||[];
+  if(!issues.length){ document.getElementById("problems").innerHTML=healthCard+'<div class="empty">No issues loaded yet. Run the Ahrefs sync to pull your audit.</div>'; return; }
+  const list=issues.map((i,idx)=>{
+    const imp=(i.importance||"").toLowerCase();
+    const steps=Array.isArray(i.fix_steps)&&i.fix_steps.length
+      ? `<div class="stepshead">How to fix it</div><ol class="steps">${i.fix_steps.map(s=>`<li>${esc(s)}</li>`).join("")}</ol>`
+      : `<div class="why">Review the ${esc(i.category||"flagged")} pages for this issue.</div>`;
+    return `<div class="card">
+      <div class="top"><div class="prio">${idx+1}</div>
+        <span class="impbadge ${imp}">${esc(i.importance)}</span><span class="cat">${esc(i.category||"")}</span></div>
+      <div class="kw">${esc(i.name)}</div>
+      <div class="stats"><span><b>${num(i.affected)}</b> pages affected</span></div>
+      ${steps}</div>`;
+  }).join("");
+  document.getElementById("problems").innerHTML=healthCard+list;
+}
 function controlsFor(b){
   const st=b.status||"open";
   if(st==="submitted"){
@@ -193,10 +205,13 @@ function controlsFor(b){
       `<div class="statusbar"><span class="pill changes">Changes requested</span>`+
       `<button class="sbtn btnp" onclick="resubmit('${b.id}')">Re-submit</button></div>`;
   }
-  const mk=s=>`<button class="sbtn ${st===s?"active":""}" data-s="${s}" onclick="setStatus('${b.id}','${s}')">${s==="open"?"Open":"Doing"}</button>`;
-  return `<div class="statusbar">${mk("open")}${mk("doing")}<button class="sbtn btnp" onclick="submitForReview('${b.id}')">Submit for review</button></div>`;
+  if(st==="doing"){
+    return `<div class="statusbar"><span class="pill doing">In progress</span>`+
+      `<button class="sbtn btnp" onclick="submitForReview('${b.id}')">Submit for review</button></div>`;
+  }
+  return `<div class="statusbar"><span class="pill todo">Not started</span>`+
+    `<button class="sbtn btnp" onclick="setStatus('${b.id}','doing')">Start writing</button></div>`;
 }
-
 function drawBriefs(){
   const total=briefsData.length;
   const approved=briefsData.filter(b=>b.status==="approved").length;
@@ -205,21 +220,22 @@ function drawBriefs(){
   const cards=briefsData.map(b=>{
     const st=b.status||"open";
     const cls=st==="approved"?"approved":st==="submitted"?"submitted":st==="changes"?"changes":"";
+    const stepsHtml=Array.isArray(b.steps)&&b.steps.length
+      ? `<div class="stepshead">Do these steps</div><ol class="steps">${b.steps.map(s=>`<li>${esc(s)}</li>`).join("")}</ol>`
+      : `<div class="brief">${esc(b.brief)}</div>`;
     return `<div class="card ${cls}">
       <div class="top"><div class="prio">${esc(b.priority)}</div>
         <span class="tag ${b.action==="expand"?"expand":"write_new"}">${b.action==="expand"?"Expand page":"Write new"}</span></div>
       <div class="kw">${esc(b.target_keyword)}</div>
       <div class="stats"><span>Page: <b>${esc(b.page_path)}</b></span><span>Rank: <b>${esc(b.current_position)}</b></span><span>~${num(b.monthly_impressions)}/mo</span></div>
       <div class="why">${esc(b.why)}</div>
-      <div class="brief">${esc(b.brief)}</div>
+      ${stepsHtml}
       ${Array.isArray(b.internal_links)&&b.internal_links.length?`<div class="links">${b.internal_links.map(x=>`<span class="chip">${esc(x)}</span>`).join("")}</div>`:""}
       ${b.cta?`<div class="cta"><span>CTA</span>${esc(b.cta)}</div>`:""}
-      ${controlsFor(b)}
-    </div>`;
-  }).join("")||'<div class="empty">No briefs yet.</div>';
+      ${controlsFor(b)}</div>`;
+  }).join("")||'<div class="empty">No briefs yet. Run the content brain to generate this week\u2019s list.</div>';
   document.getElementById("assignments").innerHTML=bar+cards;
 }
-
 async function setStatus(id,status,extra){
   const b=briefsData.find(x=>x.id===id);
   if(b){ b.status=status; if(extra){ if("submitted_url" in extra)b.submitted_url=extra.submitted_url; if("review_note" in extra)b.review_note=extra.review_note; } }
@@ -231,7 +247,6 @@ function submitForReview(id){ const u=prompt("Paste the link to the finished blo
 function resubmit(id){ const u=prompt("Paste the updated link (optional):")||""; setStatus(id,"submitted",{submitted_url:u}); }
 function sendBack(id){ const n=prompt("What needs to change? The writer will see this note."); if(n===null) return; setStatus(id,"changes",{review_note:n}); }
 function approve(id){ setStatus(id,"approved",{}); }
-
 async function fetchJSON(base){
   const r=await fetch(base+"?pass="+encodeURIComponent(pass));
   if(r.status===401) throw new Error("Wrong passcode");
@@ -239,8 +254,8 @@ async function fetchJSON(base){
   return r.json();
 }
 async function loadAll(){
-  const [dash,briefs]=await Promise.all([fetchJSON(DASH),fetchJSON(BRIEFS)]);
-  renderOverview(dash); briefsData=briefs.briefs||[]; drawBriefs();
+  const [dash,briefs,problems]=await Promise.all([fetchJSON(DASH),fetchJSON(BRIEFS),fetchJSON(PROBLEMS)]);
+  renderOverview(dash); briefsData=briefs.briefs||[]; drawBriefs(); renderProblems(problems);
 }
 async function enter(){
   pass=document.getElementById("pass").value.trim();
@@ -255,8 +270,7 @@ document.querySelectorAll(".tab").forEach(t=>t.addEventListener("click",()=>{
   document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));
   t.classList.add("active");
   const tab=t.dataset.tab;
-  document.getElementById("overview").classList.toggle("hidden",tab!=="overview");
-  document.getElementById("assignments").classList.toggle("hidden",tab!=="assignments");
+  TABS.forEach(id=>document.getElementById(id).classList.toggle("hidden",id!==tab));
 }));
 (async()=>{
   const saved=localStorage.getItem("asap_os_pass"); if(!saved) return; pass=saved;

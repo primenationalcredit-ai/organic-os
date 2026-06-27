@@ -1,6 +1,6 @@
 // ============================================================================
 // netlify/functions/content-brain-background.mjs
-// Turns Search Console data into exact blog assignments for the writers.
+// Turns Search Console data into exact, STEP-BY-STEP blog assignments.
 // Reads gsc_opportunities, asks Claude what to do, writes to content_briefs.
 //
 // Background function (15-min limit). Triggered weekly by content-brain-trigger.
@@ -15,16 +15,12 @@ const supabase = createClient(
 );
 
 const SYSTEM_PROMPT = `You assign blog work for a US credit repair company's content team.
-Your job is to turn raw search data into briefs so specific that a writer needs zero
-follow-up questions. You never say "write about X" vaguely. Every brief names the exact
-target keyword, the current rank, the monthly impression potential, the article angle,
-the H2 sections to include, which internal pages to link to, and the call to action.
-
-You lead with the cheapest wins: pages already ranking 4-15 ("striking distance") that
-just need expansion beat writing brand-new articles from scratch. You are revenue-minded:
-a keyword someone searches when they have a charge-off or collection is worth far more
-than an informational term, and you say so. Be concrete and confident, but keep each
-brief tight and scannable — a writer should read it in under a minute.`;
+The writers are not SEO experts, so you write like a checklist a 5th grader could follow.
+Every assignment becomes a numbered list of plain, do-this-now steps. No theory, no jargon.
+You lead with the cheapest wins: pages already ranking 4-15 that just need a push.
+You are revenue-minded: a person searching with a real money problem (a charge-off, a
+collection, a strange entry on their report) is worth far more than a casual reader, and
+your steps reflect that with strong, specific calls to action.`;
 
 async function buildSnapshot() {
   const { data: striking } = await supabase
@@ -47,53 +43,49 @@ async function buildSnapshot() {
 function userPrompt(snap) {
   return `Here is live Search Console data for the site (last 28 days).
 
-STRIKING DISTANCE — keywords already ranking 4-15. Expanding the existing page is the
+STRIKING DISTANCE â€” keywords already ranking 4-15. Expanding the existing page is the
 cheapest path to page 1:
 ${JSON.stringify(snap.striking)}
 
-CONTENT GAPS — keywords ranking 15-40. Seen but not winning; may need a stronger or
-dedicated article:
+CONTENT GAPS â€” keywords ranking 15-40. Seen but not winning:
 ${JSON.stringify(snap.gaps)}
 
-Pick the 10 highest-value opportunities and write a brief for each. Return ONLY a JSON
-array (no prose, no markdown fences), highest priority first, each shaped exactly like:
+Pick the 10 highest-value opportunities and write an assignment for each. Return ONLY a
+JSON array (no prose, no markdown fences), highest priority first, each shaped exactly:
 {
   "priority": 1,
   "action": "expand" | "write_new",
-  "target_keyword": "remove late payments",
-  "page_path": "/remove-late-payments",
-  "current_position": 8.2,
-  "monthly_impressions": 1900,
-  "why": "1 sentence: the business reason this is worth doing now",
-  "brief": "3-5 sentences max: the angle, the H2 sections to add, word-count target, what's missing today",
-  "internal_links": ["/remove-charge-off", "/remove-collections"],
-  "cta": "the specific call to action to place in the article"
+  "target_keyword": "what is jpmcb on my credit report",
+  "page_path": "/blog/jpmcb-card-on-credit-report",
+  "current_position": 10.7,
+  "monthly_impressions": 10171,
+  "why": "1 short sentence: the problem and why it matters in plain words",
+  "steps": [
+    "Step 1 in plain language, e.g. 'Rewrite the page title to: ...'",
+    "Step 2, e.g. 'Add an H2 section called ... that answers ...'",
+    "more steps... each a single concrete action a writer does",
+    "Add internal links to the most relevant pages.",
+    "Add this exact call to action: ...",
+    "Publish, then hit Submit for review in the app."
+  ],
+  "internal_links": ["/remove-charge-off"],
+  "cta": "the specific call to action to place in the post"
 }
-Rules: prefer "expand" over "write_new" when a page already ranks. monthly_impressions
-should be roughly 7x the windowed impressions you see (28-day window). Keep the "brief"
-field to 3-5 sentences so the whole list stays scannable.`;
+Rules:
+- 6 to 9 steps, each one a single plain action. A 5th grader should be able to follow it.
+- Prefer "expand" when a page already ranks.
+- monthly_impressions is roughly 7x the windowed impressions you see.
+- The LAST step is always: "Publish, then hit Submit for review in the app."`;
 }
 
-// Tough parser: handles clean JSON, and salvages complete briefs if the output
-// was ever cut off mid-stream.
 function parseBriefs(text) {
   const clean = text.replace(/```json|```/g, "").trim();
-  try {
-    return JSON.parse(clean);
-  } catch {
-    // Truncated mid-object: keep everything up to the last complete object.
+  try { return JSON.parse(clean); }
+  catch {
     const cut = clean.lastIndexOf("},");
-    if (cut !== -1) {
-      try {
-        return JSON.parse(clean.slice(0, cut + 1) + "]");
-      } catch {}
-    }
+    if (cut !== -1) { try { return JSON.parse(clean.slice(0, cut + 1) + "]"); } catch {} }
     const lastBrace = clean.lastIndexOf("}");
-    if (lastBrace !== -1) {
-      try {
-        return JSON.parse(clean.slice(0, lastBrace + 1) + "]");
-      } catch {}
-    }
+    if (lastBrace !== -1) { try { return JSON.parse(clean.slice(0, lastBrace + 1) + "]"); } catch {} }
     throw new Error("Could not parse briefs JSON even after salvage.");
   }
 }
@@ -107,20 +99,15 @@ async function askClaude(snap) {
       "anthropic-version": "2023-06-01",
     },
     body: JSON.stringify({
-      model: "claude-sonnet-4-6", // bump to claude-opus-4-8 for sharper briefs
-      max_tokens: 16000, // plenty of room so briefs never truncate
+      model: "claude-sonnet-4-6",
+      max_tokens: 16000,
       system: SYSTEM_PROMPT,
       messages: [{ role: "user", content: userPrompt(snap) }],
     }),
   });
-
   if (!res.ok) throw new Error(`Anthropic API ${res.status}: ${await res.text()}`);
   const data = await res.json();
-  const text = (data.content || [])
-    .filter((b) => b.type === "text")
-    .map((b) => b.text)
-    .join("\n");
-
+  const text = (data.content || []).filter(b => b.type === "text").map(b => b.text).join("\n");
   return parseBriefs(text);
 }
 
@@ -128,12 +115,10 @@ export default async () => {
   try {
     console.log("Content brain started...");
     const snap = await buildSnapshot();
-
     if (snap.striking.length === 0 && snap.gaps.length === 0) {
-      console.log("No opportunities found — is GSC data in the table?");
+      console.log("No opportunities found â€” is GSC data in the table?");
       return;
     }
-
     const briefs = await askClaude(snap);
     const runDate = new Date().toISOString().slice(0, 10);
     const rows = briefs.map((b) => ({
@@ -145,16 +130,15 @@ export default async () => {
       current_position: b.current_position,
       monthly_impressions: b.monthly_impressions,
       why: b.why,
-      brief: b.brief,
+      steps: b.steps || [],
+      brief: Array.isArray(b.steps) ? b.steps.join("\n") : (b.brief || ""),
       internal_links: b.internal_links || [],
       cta: b.cta,
       status: "open",
     }));
-
     const { error } = await supabase.from("content_briefs").insert(rows);
     if (error) throw error;
-
-    console.log(`Content brain wrote ${rows.length} briefs.`);
+    console.log(`Content brain wrote ${rows.length} stepped assignments.`);
   } catch (err) {
     console.error("Content brain failed:", err.message);
   }
