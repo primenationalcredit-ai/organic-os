@@ -19,9 +19,11 @@ export default async (req) => {
   try {
     const { data: meta } = await supabase.from("site_meta").select("value").eq("key", "ahrefs_health").maybeSingle();
     const health = meta ? JSON.parse(meta.value) : null;
+    const { data: statusRow } = await supabase.from("site_meta").select("value").eq("key", "ahrefs_sync_status").maybeSingle();
+    const sync_status = statusRow ? JSON.parse(statusRow.value) : null;
     const { data: issues } = await supabase.from("ahrefs_issues").select("*");
     (issues || []).sort((a, b) => (IMP[a.importance] ?? 3) - (IMP[b.importance] ?? 3) || (b.affected || 0) - (a.affected || 0));
-    return new Response(JSON.stringify({ health, issues: issues || [] }), { headers: { "content-type": "application/json" } });
+    return new Response(JSON.stringify({ health, issues: issues || [], sync_status }), { headers: { "content-type": "application/json" } });
   } catch (err) {
     return new Response(JSON.stringify({ error: err.message }), { status: 500, headers: { "content-type": "application/json" } });
   }

@@ -159,7 +159,7 @@ function renderProblems(d){
   const h=d.health||{},score=(h.health_score??null),cls=score==null?"mid":score>=80?"good":score>=50?"mid":"bad";
   const hc=`<div class="health"><div class="hscore ${cls}">${score??"\u2014"}</div><div><div class="hlabel">Site health score</div><div class="hsub"><b>${num(h.errors)}</b> errors \u00b7 <b>${num(h.warnings)}</b> warnings \u00b7 <b>${num(h.notices)}</b> notices across ${num(h.total)} pages</div></div></div>`;
   const issues=d.issues||[];
-  if(!issues.length){document.getElementById("problems").innerHTML=hc+'<div class="empty">No issues loaded yet. Run the Ahrefs sync to pull your audit.</div>';return;}
+  if(!issues.length){const e=d.sync_status&&d.sync_status.error;document.getElementById("problems").innerHTML=hc+'<div class="empty">'+(e?("Sync error: "+esc(e)):"No issues loaded yet. Run the Ahrefs sync to pull your audit.")+'</div>';return;}
   const list=issues.map((i,idx)=>{const imp=(i.importance||"").toLowerCase();const steps=Array.isArray(i.fix_steps)&&i.fix_steps.length?`<div class="stepshead">How to fix it</div><ol class="steps">${i.fix_steps.map(s=>`<li>${esc(s)}</li>`).join("")}</ol>`:`<div class="why">Review the ${esc(i.category||"flagged")} pages for this issue.</div>`;return `<div class="card"><div class="top"><div class="prio">${idx+1}</div><span class="impbadge ${imp}">${esc(i.importance)}</span><span class="cat">${esc(i.category||"")}</span></div><div class="kw">${esc(i.name)}</div><div class="stats"><span><b>${num(i.affected)}</b> pages affected</span></div>${steps}</div>`;}).join("");
   document.getElementById("problems").innerHTML=hc+list;
 }

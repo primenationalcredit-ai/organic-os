@@ -91,16 +91,31 @@ export default async () => {
       (arr || []).forEach(x => { if (x && x.issue_id) steps[x.issue_id] = x.fix_steps; });
     } catch (e) { console.log("Fix-steps pass skipped: " + e.message); }
 
-    // 4. Store
+    // 4. Store as a clean snapshot. delete+insert avoids any onConflict constraint
+    //    mismatch, and we record the outcome so the tab can show what happened.
     const rows = top.map(i => ({
       issue_id: i.issue_id, name: i.name, importance: i.importance,
       category: i.category, affected: i.crawled,
       fix_steps: steps[i.issue_id] || null, captured_at: new Date().toISOString(),
     }));
-    const { error } = await supabase.from("ahrefs_issues").upsert(rows, { onConflict: "issue_id" });
-    if (error) throw error;
 
-    console.log(`Ahrefs sync ok: health ${hs.health_score}, ${rows.length} issues stored.`);
+    let writeError = null;
+    try {
+      await supabase.from("ahrefs_issues").delete().neq("issue_id", "___never___");
+      if (rows.length) {
+        const { error } = await supabase.from("ahrefs_issues").insert(rows);
+        if (error) throw error;
+      }
+    } catch (e) { writeError = e.message; }
+
+    await supabase.from("site_meta").upsert({
+      key: "ahrefs_sync_status",
+      value: JSON.stringify({ ok: !writeError, issues_written: writeError ? 0 : rows.length, error: writeError, at: new Date().toISOString() }),
+      updated_at: new Date().toISOString(),
+    });
+
+    if (writeError) console.error("Issues write failed:", writeError);
+    else console.log(`Ahrefs sync ok: health ${hs.health_score}, ${rows.length} issues stored.`);
   } catch (err) {
     console.error("Ahrefs sync failed:", err.message);
   }
