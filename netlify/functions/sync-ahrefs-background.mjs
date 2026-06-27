@@ -60,14 +60,10 @@ export default async () => {
   try {
     console.log("Ahrefs sync started...");
 
-    // 1. Health score + project id (free endpoint)
-    let proj = await ahrefs("site-audit/projects", { project_url: DOMAIN });
-    let hs = (proj.healthscores || [])[0];
-    if (!hs) {
-      const all = await ahrefs("site-audit/projects", {});
-      hs = (all.healthscores || []).find(p => (p.target_url || "").includes(DOMAIN));
-    }
-    if (!hs) { console.log("No Site Audit project found for " + DOMAIN + ". Has it been crawled?"); return; }
+    // 1. The projects endpoint returns ALL projects. Match THIS domain, do not take [0].
+    const proj = await ahrefs("site-audit/projects", {});
+    const hs = (proj.healthscores || []).find(p => (p.target_url || "").toLowerCase().includes(DOMAIN));
+    if (!hs || !hs.project_id) { console.log("No Site Audit project found for " + DOMAIN + "."); return; }
 
     await supabase.from("site_meta").upsert({
       key: "ahrefs_health",
@@ -81,8 +77,9 @@ export default async () => {
 
     // 2. Issues (50 units)
     const iss = await ahrefs("site-audit/issues", { project_id: hs.project_id });
+    const impRank = (s) => ({ error: 0, warning: 1, notice: 2 }[(s || "").toLowerCase()] ?? 3);
     let issues = (iss.issues || []).filter(i => (i.crawled || 0) > 0);
-    issues.sort((a, b) => (IMP[a.importance] ?? 3) - (IMP[b.importance] ?? 3) || (b.crawled || 0) - (a.crawled || 0));
+    issues.sort((a, b) => impRank(a.importance) - impRank(b.importance) || (b.crawled || 0) - (a.crawled || 0));
     const top = issues.slice(0, 20);
 
     // 3. Plain-language fix steps for the top 12
