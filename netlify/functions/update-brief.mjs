@@ -15,6 +15,7 @@ export default async (req) => {
     if(body.review_note!==undefined) patch.review_note=body.review_note;
     if(body.interview!==undefined) patch.interview=body.interview;
     if(body.draft_status!==undefined) patch.draft_status=body.draft_status;
+    if(body.rewrite_status!==undefined) patch.rewrite_status=body.rewrite_status;
     const { error }=await supabase.from("content_briefs").update(patch).eq("id",id);
     if(error) throw error;
     return new Response(JSON.stringify({ok:true}),{headers:{"content-type":"application/json"}});

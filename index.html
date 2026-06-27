@@ -117,9 +117,10 @@
 <script>
 const DASH="/.netlify/functions/get-dashboard",BRIEFS="/.netlify/functions/get-briefs",PROBLEMS="/.netlify/functions/get-problems",MERGE="/.netlify/functions/get-cannibalization",UPDATE="/.netlify/functions/update-brief";
 const INTERVIEWQ="/.netlify/functions/interview-questions",GENDRAFT="/.netlify/functions/generate-draft-background",GETDRAFT="/.netlify/functions/get-draft";
+const REWRITE="/.netlify/functions/rewrite-page-background",GETREWRITE="/.netlify/functions/get-rewrite";
 const TABS=["overview","problems","merge","assignments"];
 const gate=document.getElementById("gate"),app=document.getElementById("app");
-let pass="",briefsData=[],interviewBrief=null,interviewQs=[],pollTimer=null;
+let pass="",briefsData=[],interviewBrief=null,interviewQs=[],pollTimer=null,rewriteBrief=null;
 const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const num=n=>Number(n||0).toLocaleString();
 const short=u=>{try{const x=new URL(u);return x.pathname||u;}catch(e){return u;}};
@@ -173,7 +174,7 @@ function liveStrip(b){
   const link=(m&&m.page)?m.page:("https://www.asapcreditrepairusa.com"+(b.page_path||""));
   const head=`<div class="livehead"><span>Live data</span><a class="lnk" href="${esc(link)}" target="_blank" rel="noopener">view live page \u2192</a></div>`;
   if(!m||(!m.impr_cur&&!m.clicks_cur)){
-    return `<div class="livebox">${head}<div class="empty" style="padding:2px 0">No Search Console data for this page yet. It builds as the daily sync runs.</div></div>`;
+    return `<div class="livebox">${head}<div class="empty" style="padding:2px 0 8px">No Search Console data for this page yet. It builds as the daily sync runs.</div><button class="sbtn btnai" onclick="rewritePage('${b.id}')">Rewrite this page with AI</button></div>`;
   }
   const ctr=m.impr_cur?Math.round(1000*m.clicks_cur/m.impr_cur)/10:0;
   return `<div class="livebox">${head}<div class="livemetrics">`+
@@ -181,7 +182,7 @@ function liveStrip(b){
     `<span><b>${num(m.impr_cur)}</b> impressions${trendArrow(m.impr_cur,m.impr_prev,false)}</span>`+
     `<span>position <b>${m.pos_cur??"\u2014"}</b>${trendArrow(m.pos_cur,m.pos_prev,true)}</span>`+
     `<span>CTR <b>${ctr}%</b></span>`+
-    `</div></div>`;
+    `</div><button class="sbtn btnai" style="margin-top:10px" onclick="rewritePage('${b.id}')">Rewrite this page with AI</button></div>`;
 }
 function controlsFor(b){
   const st=b.status||"open",iv=`<button class="sbtn btnai" onclick="openInterview('${b.id}')">Interview me</button>`;
@@ -223,6 +224,17 @@ async function buildDraft(){
 function pollDraft(){if(pollTimer)clearInterval(pollTimer);pollTimer=setInterval(async()=>{try{const r=await fetch(GETDRAFT+"?id="+encodeURIComponent(interviewBrief)+"&pass="+encodeURIComponent(pass));const d=await r.json();if(d.draft_status==="ready"&&d.draft){clearInterval(pollTimer);pollTimer=null;showDraft(d.draft);}else if(d.draft_status==="error"){clearInterval(pollTimer);pollTimer=null;showModal('<div class="empty">The draft failed to build. Close and try again.</div>');}}catch(e){}},4000);}
 function showDraft(text){showModal(`<h3>Your draft</h3><p class="msub">Built from your answers. Copy it, edit, add images, then publish and Submit for review.</p><textarea id="draftbox" rows="18" readonly>${esc(text)}</textarea><div style="display:flex;gap:8px;margin-top:12px"><button class="sbtn btnp" onclick="copyDraft()">Copy draft</button><button class="sbtn" onclick="closeModal()">Close</button></div>`);}
 function copyDraft(){const el=document.getElementById("draftbox");if(!el)return;el.select();try{document.execCommand("copy");}catch(e){}}
+async function rewritePage(id){
+  rewriteBrief=id;
+  showModal('<div class="loading">Reading the live page and rewriting it...<br>About a minute. Keep this window open.</div>');
+  try{
+    await fetch(UPDATE+"?pass="+encodeURIComponent(pass),{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({id,rewrite_status:"generating"})});
+    fetch(REWRITE+"?id="+encodeURIComponent(id)+"&pass="+encodeURIComponent(pass),{method:"POST"});
+    pollRewrite();
+  }catch(e){showModal('<div class="empty">Could not start the rewrite. Close and try again.</div>');}
+}
+function pollRewrite(){if(pollTimer)clearInterval(pollTimer);pollTimer=setInterval(async()=>{try{const r=await fetch(GETREWRITE+"?id="+encodeURIComponent(rewriteBrief)+"&pass="+encodeURIComponent(pass));const d=await r.json();if(d.rewrite_status==="ready"&&d.rewrite){clearInterval(pollTimer);pollTimer=null;showRewrite(d.rewrite);}else if(d.rewrite_status==="error"){clearInterval(pollTimer);pollTimer=null;showModal('<div class="empty">The rewrite failed. The page may block bots. Close and try again.</div>');}}catch(e){}},4000);}
+function showRewrite(text){showModal(`<h3>Rewritten page</h3><p class="msub">A stronger version of your live page. Review it, add the real ASAP touch and images, then publish.</p><textarea id="draftbox" rows="20" readonly>${esc(text)}</textarea><div style="display:flex;gap:8px;margin-top:12px"><button class="sbtn btnp" onclick="copyDraft()">Copy</button><button class="sbtn" onclick="closeModal()">Close</button></div>`);}
 async function fetchJSON(base){const r=await fetch(base+"?pass="+encodeURIComponent(pass));if(r.status===401)throw new Error("Wrong passcode");if(!r.ok)throw new Error("Load failed");return r.json();}
 async function loadAll(){const[dash,briefs,problems,merge]=await Promise.all([fetchJSON(DASH),fetchJSON(BRIEFS),fetchJSON(PROBLEMS),fetchJSON(MERGE)]);renderOverview(dash);briefsData=briefs.briefs||[];drawBriefs();renderProblems(problems);renderMerge(merge);}
 async function enter(){pass=document.getElementById("pass").value.trim();const err=document.getElementById("err");err.textContent="";try{await loadAll();localStorage.setItem("asap_os_pass",pass);gate.classList.add("hidden");app.classList.remove("hidden");}catch(e){err.textContent=e.message;}}
