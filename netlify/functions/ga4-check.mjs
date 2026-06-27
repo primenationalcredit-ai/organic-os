@@ -69,6 +69,22 @@ export default async (req) => {
           conversions: r.metricValues[1].value,
         }));
       } catch (e) { out.sample_error = e.message; }
+
+      // 4. Every event being collected, so we can spot the lead events.
+      try {
+        const data2 = google.analyticsdata({ version: "v1beta", auth });
+        const ev = await data2.properties.runReport({
+          property: chosen,
+          requestBody: {
+            dateRanges: [{ startDate: "28daysAgo", endDate: "yesterday" }],
+            dimensions: [{ name: "eventName" }],
+            metrics: [{ name: "eventCount" }],
+            orderBys: [{ metric: { metricName: "eventCount" }, desc: true }],
+            limit: 40,
+          },
+        });
+        out.events = (ev.data.rows || []).map((r) => ({ event: r.dimensionValues[0].value, count: r.metricValues[0].value }));
+      } catch (e) { out.events_error = e.message; }
     }
 
     return new Response(JSON.stringify(out, null, 2), { headers: { "content-type": "application/json" } });
