@@ -104,27 +104,45 @@
   <header><div><h1>Organic OS</h1><div class="sub">Live from Search Console + Ahrefs</div></div><button class="refresh" id="refresh">refresh</button></header>
   <div class="tabs">
     <button class="tab active" data-tab="overview">Overview</button>
+    <button class="tab" data-tab="trends">Trends</button>
     <button class="tab" data-tab="problems">Problems</button>
     <button class="tab" data-tab="merge">Merge</button>
     <button class="tab" data-tab="assignments">Assignments</button>
   </div>
   <div id="overview"><div class="loading">Loading...</div></div>
+  <div id="trends" class="hidden"><div class="loading">Loading...</div></div>
   <div id="problems" class="hidden"><div class="loading">Loading...</div></div>
   <div id="merge" class="hidden"><div class="loading">Loading...</div></div>
   <div id="assignments" class="hidden"><div class="loading">Loading...</div></div>
 </div>
 <div id="modal" class="modal hidden"><div class="modalbox"><button class="modalx" onclick="closeModal()">&times;</button><div id="modalbody"></div></div></div>
 <script>
-const DASH="/.netlify/functions/get-dashboard",BRIEFS="/.netlify/functions/get-briefs",PROBLEMS="/.netlify/functions/get-problems",MERGE="/.netlify/functions/get-cannibalization",UPDATE="/.netlify/functions/update-brief";
+const DASH="/.netlify/functions/get-dashboard",BRIEFS="/.netlify/functions/get-briefs",PROBLEMS="/.netlify/functions/get-problems",MERGE="/.netlify/functions/get-cannibalization",TRENDS="/.netlify/functions/get-trends",UPDATE="/.netlify/functions/update-brief";
 const INTERVIEWQ="/.netlify/functions/interview-questions",GENDRAFT="/.netlify/functions/generate-draft-background",GETDRAFT="/.netlify/functions/get-draft";
 const REWRITE="/.netlify/functions/rewrite-page-background",GETREWRITE="/.netlify/functions/get-rewrite";
-const TABS=["overview","problems","merge","assignments"];
+const TABS=["overview","trends","problems","merge","assignments"];
 const gate=document.getElementById("gate"),app=document.getElementById("app");
 let pass="",briefsData=[],interviewBrief=null,interviewQs=[],pollTimer=null,rewriteBrief=null;
 const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const num=n=>Number(n||0).toLocaleString();
 const short=u=>{try{const x=new URL(u);return x.pathname||u;}catch(e){return u;}};
 function delta(cur,prev,lb){cur=Number(cur||0);prev=Number(prev||0);if(!prev)return '<div class="delta flat">no prior week yet</div>';const diff=cur-prev,pct=Math.round(100*diff/prev),good=lb?diff<0:diff>0,cls=diff===0?"flat":good?"up":"down",a=diff===0?"":diff>0?"\u25B2":"\u25BC";return `<div class="delta ${cls}">${a} ${Math.abs(pct)}% vs last week</div>`;}
+function renderTrends(d){
+  const months=(d.months||[]);
+  const host=document.getElementById("trends");
+  if(months.length<2){host.innerHTML='<div class="section"><h2>Trends over time</h2><p class="note">Run the 16-month backfill once to fill this in: open the backfill function URL, wait a moment, then refresh. (deploy notes have the link.)</p></div>';return;}
+  const last=months[months.length-1];
+  const back=n=>months[months.length-1-n]||null;
+  const dcard=(title,n)=>{const b=back(n);if(!b)return `<div class="kpi"><div class="label">${title}</div><div class="val" style="font-size:14px;color:#cbd5e1">building history</div></div>`;const cur=last.clicks,prev=b.clicks,diff=cur-prev,pct=prev?Math.round(100*diff/prev):0,cls=diff===0?"flat":diff>0?"up":"down",a=diff>0?"\u25B2":diff<0?"\u25BC":"";return `<div class="kpi"><div class="label">${title}</div><div class="val ${cls}" style="font-size:20px">${a} ${Math.abs(pct)}%</div><div class="delta flat">${num(prev)} \u2192 ${num(cur)}</div></div>`;};
+  const cards=`<div class="kpis"><div class="kpi"><div class="label">Clicks this month</div><div class="val">${num(last.clicks)}</div><div class="delta flat">${last.month}</div></div>${dcard("vs 3 months ago",3)}${dcard("vs 6 months ago",6)}${dcard("vs 12 months ago",12)}</div>`;
+  // bar chart of monthly clicks
+  const data=months.slice(-16),W=720,H=220,pad=28,max=Math.max(1,...data.map(m=>m.clicks||0)),bw=(W-pad*2)/data.length;
+  const bars=data.map((m,i)=>{const h=Math.round(((m.clicks||0)/max)*(H-50)),x=pad+i*bw,y=H-28-h;const lbl=(i%2===0)?`<text x="${x+bw/2}" y="${H-10}" font-size="10" fill="#94a3b8" text-anchor="middle">${esc(m.month.slice(5))}/${esc(m.month.slice(2,4))}</text>`:"";return `<rect x="${x+3}" y="${y}" width="${Math.max(2,bw-6)}" height="${h}" rx="3" fill="#0284c7"></rect>${lbl}`;}).join("");
+  const chart=`<div class="section"><h2>Monthly clicks</h2><p class="note">Each bar is one month of organic clicks. This is your trajectory.</p><svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto">${bars}</svg></div>`;
+  const rows=[...months].reverse().map(m=>`<div class="row"><span class="p">${esc(m.month)}</span><span class="d">${num(m.clicks)} clicks \u00b7 ${num(m.impressions)} impr \u00b7 pos ${m.position}</span></div>`).join("");
+  const table=`<div class="section"><h2>Month by month</h2>${rows}</div>`;
+  host.innerHTML=cards+chart+table;
+}
 function renderOverview(d){
   const t=d.totals||{},opps=d.opportunities||[],ctr=t.impr_7d?Math.round(1000*t.clicks_7d/t.impr_7d)/10:0;
   const hero=`<div class="hero"><h2>The opportunity</h2><p>Your site showed up <b>${num(t.impr_7d)}</b> times in Google this week and earned <b>${num(t.clicks_7d)}</b> clicks, a <b>${ctr}%</b> click rate. <b>${opps.length}</b> keywords already rank on page 2 and need one push to reach page 1.</p></div>`;
@@ -236,7 +254,7 @@ async function rewritePage(id){
 function pollRewrite(){if(pollTimer)clearInterval(pollTimer);pollTimer=setInterval(async()=>{try{const r=await fetch(GETREWRITE+"?id="+encodeURIComponent(rewriteBrief)+"&pass="+encodeURIComponent(pass));const d=await r.json();if(d.rewrite_status==="ready"&&d.rewrite){clearInterval(pollTimer);pollTimer=null;showRewrite(d.rewrite);}else if(d.rewrite_status==="error"){clearInterval(pollTimer);pollTimer=null;showModal('<div class="empty">The rewrite failed. The page may block bots. Close and try again.</div>');}}catch(e){}},4000);}
 function showRewrite(text){showModal(`<h3>Rewritten page</h3><p class="msub">A stronger version of your live page. Review it, add the real ASAP touch and images, then publish.</p><textarea id="draftbox" rows="20" readonly>${esc(text)}</textarea><div style="display:flex;gap:8px;margin-top:12px"><button class="sbtn btnp" onclick="copyDraft()">Copy</button><button class="sbtn" onclick="closeModal()">Close</button></div>`);}
 async function fetchJSON(base){const r=await fetch(base+"?pass="+encodeURIComponent(pass));if(r.status===401)throw new Error("Wrong passcode");if(!r.ok)throw new Error("Load failed");return r.json();}
-async function loadAll(){const[dash,briefs,problems,merge]=await Promise.all([fetchJSON(DASH),fetchJSON(BRIEFS),fetchJSON(PROBLEMS),fetchJSON(MERGE)]);renderOverview(dash);briefsData=briefs.briefs||[];drawBriefs();renderProblems(problems);renderMerge(merge);}
+async function loadAll(){const[dash,briefs,problems,merge,trends]=await Promise.all([fetchJSON(DASH),fetchJSON(BRIEFS),fetchJSON(PROBLEMS),fetchJSON(MERGE),fetchJSON(TRENDS)]);renderOverview(dash);briefsData=briefs.briefs||[];drawBriefs();renderProblems(problems);renderMerge(merge);renderTrends(trends);}
 async function enter(){pass=document.getElementById("pass").value.trim();const err=document.getElementById("err");err.textContent="";try{await loadAll();localStorage.setItem("asap_os_pass",pass);gate.classList.add("hidden");app.classList.remove("hidden");}catch(e){err.textContent=e.message;}}
 document.getElementById("enter").addEventListener("click",enter);
 document.getElementById("pass").addEventListener("keydown",e=>{if(e.key==="Enter")enter();});
