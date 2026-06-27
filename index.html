@@ -18,7 +18,7 @@
   header{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:18px;}
   header h1{font-size:22px;margin:0;letter-spacing:-.02em;} header .sub{color:var(--muted);font-size:13px;margin-top:3px;}
   .refresh{font-size:13px;color:var(--sky);cursor:pointer;background:none;border:none;}
-  .tabs{display:flex;gap:6px;margin-bottom:20px;border-bottom:1px solid var(--line);}
+  .tabs{display:flex;gap:6px;margin-bottom:20px;border-bottom:1px solid var(--line);flex-wrap:wrap;}
   .tab{padding:9px 14px;font-size:14px;font-weight:600;color:var(--muted);cursor:pointer;border:none;background:none;border-bottom:2px solid transparent;margin-bottom:-1px;}
   .tab.active{color:var(--ink);border-bottom-color:var(--amber);}
   .hero{background:linear-gradient(180deg,#fff,#fcfcfd);border:1px solid var(--line);border-radius:14px;padding:20px 22px;margin-bottom:18px;}
@@ -73,6 +73,12 @@
   .pill.approved{background:#ecfdf5;color:var(--emerald);} .pill.changes{background:#fef2f2;color:#dc2626;}
   .notebox{font-size:13px;background:#fef2f2;border-left:3px solid #dc2626;padding:8px 12px;border-radius:0 8px 8px 0;margin-bottom:12px;color:#7f1d1d;}
   .lnk{font-size:13px;color:var(--sky);word-break:break-all;}
+  .keepbadge{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:3px 8px;border-radius:6px;background:#ecfdf5;color:var(--emerald);}
+  .mergebadge{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:3px 8px;border-radius:6px;background:#fff7ed;color:#c2410c;}
+  .pagerow{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:9px 11px;border:1px solid var(--line);border-radius:9px;margin-bottom:7px;font-size:13px;}
+  .pagerow.keep{border-color:#a7f3d0;background:#f0fdf9;}
+  .pagerow .u{word-break:break-all;color:#334155;} .pagerow .pm{flex:none;color:var(--muted);font-variant-numeric:tabular-nums;text-align:right;}
+  .action{font-size:13.5px;color:#334155;background:#f8fafc;border:1px solid var(--line);border-radius:9px;padding:10px 12px;margin-top:10px;line-height:1.5;}
   .modal{position:fixed;inset:0;background:rgba(15,23,42,.5);display:flex;align-items:flex-start;justify-content:center;padding:40px 16px;overflow-y:auto;z-index:50;}
   .modalbox{background:#fff;border-radius:16px;max-width:640px;width:100%;padding:24px;position:relative;}
   .modalx{position:absolute;top:10px;right:14px;background:none;border:none;font-size:24px;color:var(--muted);cursor:pointer;line-height:1;}
@@ -94,21 +100,24 @@
   <div class="tabs">
     <button class="tab active" data-tab="overview">Overview</button>
     <button class="tab" data-tab="problems">Problems</button>
+    <button class="tab" data-tab="merge">Merge</button>
     <button class="tab" data-tab="assignments">Assignments</button>
   </div>
   <div id="overview"><div class="loading">Loading...</div></div>
   <div id="problems" class="hidden"><div class="loading">Loading...</div></div>
+  <div id="merge" class="hidden"><div class="loading">Loading...</div></div>
   <div id="assignments" class="hidden"><div class="loading">Loading...</div></div>
 </div>
 <div id="modal" class="modal hidden"><div class="modalbox"><button class="modalx" onclick="closeModal()">&times;</button><div id="modalbody"></div></div></div>
 <script>
-const DASH="/.netlify/functions/get-dashboard",BRIEFS="/.netlify/functions/get-briefs",PROBLEMS="/.netlify/functions/get-problems",UPDATE="/.netlify/functions/update-brief";
+const DASH="/.netlify/functions/get-dashboard",BRIEFS="/.netlify/functions/get-briefs",PROBLEMS="/.netlify/functions/get-problems",MERGE="/.netlify/functions/get-cannibalization",UPDATE="/.netlify/functions/update-brief";
 const INTERVIEWQ="/.netlify/functions/interview-questions",GENDRAFT="/.netlify/functions/generate-draft-background",GETDRAFT="/.netlify/functions/get-draft";
-const TABS=["overview","problems","assignments"];
+const TABS=["overview","problems","merge","assignments"];
 const gate=document.getElementById("gate"),app=document.getElementById("app");
 let pass="",briefsData=[],interviewBrief=null,interviewQs=[],pollTimer=null;
 const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const num=n=>Number(n||0).toLocaleString();
+const short=u=>{try{const x=new URL(u);return x.pathname||u;}catch(e){return u;}};
 function delta(cur,prev,lb){cur=Number(cur||0);prev=Number(prev||0);if(!prev)return '<div class="delta flat">no prior week yet</div>';const diff=cur-prev,pct=Math.round(100*diff/prev),good=lb?diff<0:diff>0,cls=diff===0?"flat":good?"up":"down",a=diff===0?"":diff>0?"\u25B2":"\u25BC";return `<div class="delta ${cls}">${a} ${Math.abs(pct)}% vs last week</div>`;}
 function renderOverview(d){
   const t=d.totals||{},opps=d.opportunities||[],ctr=t.impr_7d?Math.round(1000*t.clicks_7d/t.impr_7d)/10:0;
@@ -129,6 +138,23 @@ function renderProblems(d){
   if(!issues.length){document.getElementById("problems").innerHTML=hc+'<div class="empty">No issues loaded yet. Run the Ahrefs sync to pull your audit.</div>';return;}
   const list=issues.map((i,idx)=>{const imp=(i.importance||"").toLowerCase();const steps=Array.isArray(i.fix_steps)&&i.fix_steps.length?`<div class="stepshead">How to fix it</div><ol class="steps">${i.fix_steps.map(s=>`<li>${esc(s)}</li>`).join("")}</ol>`:`<div class="why">Review the ${esc(i.category||"flagged")} pages for this issue.</div>`;return `<div class="card"><div class="top"><div class="prio">${idx+1}</div><span class="impbadge ${imp}">${esc(i.importance)}</span><span class="cat">${esc(i.category||"")}</span></div><div class="kw">${esc(i.name)}</div><div class="stats"><span><b>${num(i.affected)}</b> pages affected</span></div>${steps}</div>`;}).join("");
   document.getElementById("problems").innerHTML=hc+list;
+}
+function renderMerge(d){
+  const clusters=d.clusters||[];
+  const intro=`<div class="section"><h2>Pages competing with each other</h2><p class="note">Where two or more of your own pages rank for the same search, they split your ranking power. Keep the strongest, merge the rest into it, then redirect. Strongest opportunity first.</p></div>`;
+  if(!clusters.length){document.getElementById("merge").innerHTML=intro+'<div class="empty">No overlapping pages found. Your content is clean on this front.</div>';return;}
+  const cards=clusters.map(c=>{
+    const pages=Array.isArray(c.pages)?c.pages:[];
+    const rows=pages.map((p,i)=>{
+      const keep=i===0;
+      return `<div class="pagerow ${keep?"keep":""}"><span class="u">${keep?'<span class="keepbadge">Keep</span> ':'<span class="mergebadge">Merge</span> '}${esc(short(p.page))}</span><span class="pm">${num(p.clicks)} clicks \u00b7 pos ${p.position}</span></div>`;
+    }).join("");
+    return `<div class="card"><div class="kw">${esc(c.query)}</div>
+      <div class="stats"><span><b>${c.page_count}</b> pages competing</span><span>${num(c.total_impressions)} impressions</span><span>${num(c.total_clicks)} clicks total</span></div>
+      ${rows}
+      <div class="action"><b>Do this:</b> keep the top page, move any unique tips or sections from the others into it, then 301 redirect the others to it. That stops them competing and points all the ranking power at one strong page.</div></div>`;
+  }).join("");
+  document.getElementById("merge").innerHTML=intro+cards;
 }
 function controlsFor(b){
   const st=b.status||"open",iv=`<button class="sbtn btnai" onclick="openInterview('${b.id}')">Interview me</button>`;
@@ -171,7 +197,7 @@ function pollDraft(){if(pollTimer)clearInterval(pollTimer);pollTimer=setInterval
 function showDraft(text){showModal(`<h3>Your draft</h3><p class="msub">Built from your answers. Copy it, edit, add images, then publish and Submit for review.</p><textarea id="draftbox" rows="18" readonly>${esc(text)}</textarea><div style="display:flex;gap:8px;margin-top:12px"><button class="sbtn btnp" onclick="copyDraft()">Copy draft</button><button class="sbtn" onclick="closeModal()">Close</button></div>`);}
 function copyDraft(){const el=document.getElementById("draftbox");if(!el)return;el.select();try{document.execCommand("copy");}catch(e){}}
 async function fetchJSON(base){const r=await fetch(base+"?pass="+encodeURIComponent(pass));if(r.status===401)throw new Error("Wrong passcode");if(!r.ok)throw new Error("Load failed");return r.json();}
-async function loadAll(){const[dash,briefs,problems]=await Promise.all([fetchJSON(DASH),fetchJSON(BRIEFS),fetchJSON(PROBLEMS)]);renderOverview(dash);briefsData=briefs.briefs||[];drawBriefs();renderProblems(problems);}
+async function loadAll(){const[dash,briefs,problems,merge]=await Promise.all([fetchJSON(DASH),fetchJSON(BRIEFS),fetchJSON(PROBLEMS),fetchJSON(MERGE)]);renderOverview(dash);briefsData=briefs.briefs||[];drawBriefs();renderProblems(problems);renderMerge(merge);}
 async function enter(){pass=document.getElementById("pass").value.trim();const err=document.getElementById("err");err.textContent="";try{await loadAll();localStorage.setItem("asap_os_pass",pass);gate.classList.add("hidden");app.classList.remove("hidden");}catch(e){err.textContent=e.message;}}
 document.getElementById("enter").addEventListener("click",enter);
 document.getElementById("pass").addEventListener("keydown",e=>{if(e.key==="Enter")enter();});
