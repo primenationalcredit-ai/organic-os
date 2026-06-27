@@ -147,7 +147,10 @@ function renderOverview(d){
   const t=d.totals||{},opps=d.opportunities||[],ctr=t.impr_7d?Math.round(1000*t.clicks_7d/t.impr_7d)/10:0;
   const hero=`<div class="hero"><h2>The opportunity</h2><p>Your site showed up <b>${num(t.impr_7d)}</b> times in Google this week and earned <b>${num(t.clicks_7d)}</b> clicks, a <b>${ctr}%</b> click rate. <b>${opps.length}</b> keywords already rank on page 2 and need one push to reach page 1.</p></div>`;
   const kpis=`<div class="kpi"><div class="label">Clicks (7d)</div><div class="val">${num(t.clicks_7d)}</div>${delta(t.clicks_7d,t.clicks_prev)}</div><div class="kpi"><div class="label">Impressions (7d)</div><div class="val">${num(t.impr_7d)}</div>${delta(t.impr_7d,t.impr_prev)}</div><div class="kpi"><div class="label">Avg position</div><div class="val">${t.pos_7d??"\u2014"}</div>${delta(t.pos_7d,t.pos_prev,true)}</div><div class="kpi"><div class="label">Opportunities</div><div class="val">${opps.length}</div><div class="delta flat">ranking 4-15</div></div>`;
-  const pending=`<div class="kpi pending"><div class="label">Organic leads</div><div class="val">Connect GA4</div></div><div class="kpi pending"><div class="label">Calls from blogs</div><div class="val">Connect GA4</div></div><div class="kpi pending"><div class="label">Competitors</div><div class="val">Coming next</div></div><div class="kpi pending"><div class="label">Health score</div><div class="val">See Problems tab</div></div>`;
+  const L=d.leads;
+  const pending = L
+    ? `<div class="kpi"><div class="label">Organic leads (28d)</div><div class="val">${num(L.total_leads)}</div><div class="delta up">from search traffic</div></div><div class="kpi"><div class="label">Sessions (28d)</div><div class="val">${num(L.total_sessions)}</div><div class="delta flat">landing sessions</div></div><div class="kpi"><div class="label">Lead rate</div><div class="val">${L.lead_rate}%</div><div class="delta flat">leads per session</div></div><div class="kpi pending"><div class="label">Sales</div><div class="val">Pipedrive next</div></div>`
+    : `<div class="kpi pending"><div class="label">Organic leads</div><div class="val">Run GA4 sync</div></div><div class="kpi pending"><div class="label">Sessions</div><div class="val">Run GA4 sync</div></div><div class="kpi pending"><div class="label">Lead rate</div><div class="val">Run GA4 sync</div></div><div class="kpi pending"><div class="label">Sales</div><div class="val">Pipedrive next</div></div>`;
   const g=d.gainers||[],l=d.losers||[],hp=(t.clicks_prev||0)>0;
   const rg=g.filter(x=>x.clicks_delta>0).map(x=>`<div class="row"><span class="p">${esc(x.path)}</span><span class="d up">+${num(x.clicks_delta)}</span></div>`).join("")||'<div class="empty">\u2014</div>';
   const rl=l.filter(x=>x.clicks_delta<0).map(x=>`<div class="row"><span class="p">${esc(x.path)}</span><span class="d down">${num(x.clicks_delta)}</span></div>`).join("")||'<div class="empty">\u2014</div>';
@@ -195,11 +198,13 @@ function liveStrip(b){
     return `<div class="livebox">${head}<div class="empty" style="padding:2px 0 8px">No Search Console data for this page yet. It builds as the daily sync runs.</div><button class="sbtn btnai" onclick="rewritePage('${b.id}')">Rewrite this page with AI</button></div>`;
   }
   const ctr=m.impr_cur?Math.round(1000*m.clicks_cur/m.impr_cur)/10:0;
+  const leadBit=(b.leads&&(b.leads.leads||b.leads.sessions))?`<span style="color:var(--emerald);font-weight:600">${num(b.leads.leads)} leads (28d)</span>`:"";
   return `<div class="livebox">${head}<div class="livemetrics">`+
     `<span><b>${num(m.clicks_cur)}</b> clicks${trendArrow(m.clicks_cur,m.clicks_prev,false)}</span>`+
     `<span><b>${num(m.impr_cur)}</b> impressions${trendArrow(m.impr_cur,m.impr_prev,false)}</span>`+
     `<span>position <b>${m.pos_cur??"\u2014"}</b>${trendArrow(m.pos_cur,m.pos_prev,true)}</span>`+
     `<span>CTR <b>${ctr}%</b></span>`+
+    (leadBit?`<span>${leadBit}</span>`:"")+
     `</div><button class="sbtn btnai" style="margin-top:10px" onclick="rewritePage('${b.id}')">Rewrite this page with AI</button></div>`;
 }
 function controlsFor(b){

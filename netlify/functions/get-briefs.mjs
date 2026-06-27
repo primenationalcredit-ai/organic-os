@@ -38,7 +38,12 @@ export default async (req) => {
       const { data: trends } = await supabase.from("page_trends").select("*").in("path_lc", paths);
       (trends || []).forEach((t) => { byPath[t.path_lc] = t; });
     }
-    for (const b of clean) b.metrics = byPath[norm(b.page_path)] || null;
+    const leadByPath = {};
+    if (paths.length) {
+      const { data: leadRows } = await supabase.from("ga4_leads").select("*").in("path", paths);
+      (leadRows || []).forEach((l) => { leadByPath[l.path] = l; });
+    }
+    for (const b of clean) { b.metrics = byPath[norm(b.page_path)] || null; b.leads = leadByPath[norm(b.page_path)] || null; }
 
     return new Response(
       JSON.stringify({ run_date: latest.run_date, count: clean.length, briefs: clean }),

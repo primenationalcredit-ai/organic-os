@@ -41,8 +41,17 @@ export default async (req) => {
       .eq("opportunity_type", "striking_distance")
       .order("impressions", { ascending: false }).limit(8);
 
+    // GA4 leads (last 28 days), if synced.
+    let leads = null;
+    const { data: leadAgg } = await supabase.from("ga4_leads").select("leads,sessions");
+    if (leadAgg && leadAgg.length) {
+      const total_leads = leadAgg.reduce((s, r) => s + (r.leads || 0), 0);
+      const total_sessions = leadAgg.reduce((s, r) => s + (r.sessions || 0), 0);
+      leads = { total_leads, total_sessions, lead_rate: total_sessions ? Math.round(1000 * total_leads / total_sessions) / 10 : 0 };
+    }
+
     return new Response(
-      JSON.stringify({ totals, gainers, losers, opportunities }),
+      JSON.stringify({ totals, gainers, losers, opportunities, leads }),
       { headers: { "content-type": "application/json" } }
     );
   } catch (err) {
