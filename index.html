@@ -123,9 +123,10 @@ const DASH="/.netlify/functions/get-dashboard",BRIEFS="/.netlify/functions/get-b
 const INTERVIEWQ="/.netlify/functions/interview-questions",GENDRAFT="/.netlify/functions/generate-draft-background",GETDRAFT="/.netlify/functions/get-draft";
 const REWRITE="/.netlify/functions/rewrite-page-background",GETREWRITE="/.netlify/functions/get-rewrite";
 const REVIEW="/.netlify/functions/review-submission-background",GETREVIEW="/.netlify/functions/get-review";
+const SERPBRIEF="/.netlify/functions/serp-brief-background",GETSERP="/.netlify/functions/get-serp-brief";
 const TABS=["overview","leads","trends","problems","merge","assignments"];
 const gate=document.getElementById("gate"),app=document.getElementById("app");
-let pass="",briefsData=[],interviewBrief=null,interviewQs=[],pollTimer=null,rewriteBrief=null,reviewBrief=null;
+let pass="",briefsData=[],interviewBrief=null,interviewQs=[],pollTimer=null,rewriteBrief=null,reviewBrief=null,serpBriefId=null;
 const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const num=n=>Number(n||0).toLocaleString();
 const short=u=>{try{const x=new URL(u);return x.pathname||u;}catch(e){return u;}};
@@ -237,7 +238,8 @@ function drawBriefs(){
   const bar=`<div class="progress"><div class="txt">${approved} of ${total} approved</div><div class="bar"><span style="width:${pct}%"></span></div></div>`;
   const cards=briefsData.map(b=>{const st=b.status||"open",cls=st==="approved"?"approved":st==="submitted"?"submitted":st==="changes"?"changes":"";
     const sh=Array.isArray(b.steps)&&b.steps.length?`<div class="stepshead">Do these steps</div><ol class="steps">${b.steps.map(s=>`<li>${esc(s)}</li>`).join("")}</ol>`:`<div class="brief">${esc(b.brief)}</div>`;
-    return `<div class="card ${cls}"><div class="top"><div class="prio">${esc(b.priority)}</div><span class="tag ${b.action==="expand"?"expand":"write_new"}">${b.action==="expand"?"Expand page":"Write new"}</span></div><div class="kw">${esc(b.target_keyword)}</div><div class="stats"><span>Page: <b>${esc(b.page_path)}</b></span><span>Rank: <b>${esc(b.current_position)}</b></span><span>~${num(b.monthly_impressions)}/mo</span></div>${liveStrip(b)}<div class="why">${esc(b.why)}</div>${sh}${Array.isArray(b.internal_links)&&b.internal_links.length?`<div class="links">${b.internal_links.map(x=>`<span class="chip">${esc(x)}</span>`).join("")}</div>`:""}${b.cta?`<div class="cta"><span>CTA</span>${esc(b.cta)}</div>`:""}${controlsFor(b)}</div>`;
+    const serpBtn=b.serp_brief?`<button class="sbtn btnai" onclick="viewSerp('${b.id}')">View SERP blueprint &#10003;</button>`:`<button class="sbtn btnai" onclick="buildSerp('${b.id}')">Build SERP blueprint</button>`;
+    return `<div class="card ${cls}"><div class="top"><div class="prio">${esc(b.priority)}</div><span class="tag ${b.action==="expand"?"expand":"write_new"}">${b.action==="expand"?"Expand page":"Write new"}</span></div><div class="kw">${esc(b.target_keyword)}</div><div class="stats"><span>Page: <b>${esc(b.page_path)}</b></span><span>Rank: <b>${esc(b.current_position)}</b></span><span>~${num(b.monthly_impressions)}/mo</span></div>${liveStrip(b)}<div class="why">${esc(b.why)}</div>${sh}${Array.isArray(b.internal_links)&&b.internal_links.length?`<div class="links">${b.internal_links.map(x=>`<span class="chip">${esc(x)}</span>`).join("")}</div>`:""}${b.cta?`<div class="cta"><span>CTA</span>${esc(b.cta)}</div>`:""}<div style="margin-bottom:12px">${serpBtn}</div>${controlsFor(b)}</div>`;
   }).join("")||'<div class="empty">No briefs yet. Run the content brain to generate this week\u2019s list.</div>';
   document.getElementById("assignments").innerHTML=bar+cards;
 }
@@ -267,6 +269,34 @@ function showReviewResult(d){
   }
 }
 function closeAndReload(){closeModal();loadAll();}
+async function buildSerp(id){
+  serpBriefId=id;
+  showModal('<div class="loading">Analyzing the live Google top 10 and People Also Ask...<br>About a minute. Keep this window open.</div>');
+  try{
+    await fetch(UPDATE+"?pass="+encodeURIComponent(pass),{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({id,serp_status:"building"})});
+    fetch(SERPBRIEF+"?id="+encodeURIComponent(id)+"&pass="+encodeURIComponent(pass),{method:"POST"});
+    pollSerp();
+  }catch(e){showModal('<div class="empty">Could not start. Close and try again.</div>');}
+}
+function pollSerp(){if(pollTimer)clearInterval(pollTimer);pollTimer=setInterval(async()=>{try{const r=await fetch(GETSERP+"?id="+encodeURIComponent(serpBriefId)+"&pass="+encodeURIComponent(pass));const d=await r.json();if(d.serp_status==="ready"&&d.serp_brief){clearInterval(pollTimer);pollTimer=null;const b=briefsData.find(x=>x.id===serpBriefId);if(b)b.serp_brief=d.serp_brief;showSerp(d.serp_brief);}else if(d.serp_status==="error"){clearInterval(pollTimer);pollTimer=null;showModal('<div class="empty">The blueprint failed to build. Close and try again.</div>');}else if(d.serp_status==="nokey"){clearInterval(pollTimer);pollTimer=null;showModal('<div class="empty">SERP data needs a Serper API key. Add SERPER_API_KEY in Netlify, then try again.</div>');}}catch(e){}},4000);}
+function viewSerp(id){const b=briefsData.find(x=>x.id===id);if(b&&b.serp_brief)showSerp(b.serp_brief);else buildSerp(id);}
+function showSerp(bp){
+  const li=a=>(a&&a.length)?('<ul style="margin:4px 0 12px;padding-left:18px">'+a.map(x=>`<li style="margin-bottom:4px">${esc(x)}</li>`).join("")+'</ul>'):'<p class="msub">â€”</p>';
+  const h=t=>`<div style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-top:6px">${t}</div>`;
+  const comp=(bp._competitors&&bp._competitors.length)?h("Who you are beating")+'<ul style="margin:4px 0 12px;padding-left:18px">'+bp._competitors.map(c=>`<li style="margin-bottom:4px"><a class="lnk" href="${esc(c.link)}" target="_blank" rel="noopener">${esc(c.title)}</a></li>`).join("")+'</ul>':'';
+  showModal(`<h3>SERP blueprint</h3><p class="msub">Built from the live top 10. Follow this to outrank them.</p>`
+    +h("Recommended title")+`<p style="font-size:15px;font-weight:600;margin:4px 0 12px">${esc(bp.recommended_title||"")}</p>`
+    +h("Search intent")+`<p class="msub">${esc(bp.search_intent||"")}</p>`
+    +h("Target length")+`<p class="msub">${esc(String(bp.word_count_target||""))} words</p>`
+    +h("Must-cover subtopics")+li(bp.must_cover_subtopics)
+    +h("Questions to answer")+li(bp.questions_to_answer)
+    +h("Terms to include")+li(bp.entities_and_terms)
+    +h("Suggested outline")+li(bp.suggested_outline)
+    +h("Gaps to win on")+li(bp.content_gaps)
+    +h("Suggested CTA")+`<p class="msub">${esc(bp.internal_cta||"")}</p>`
+    +comp
+    +`<button class="sbtn" style="margin-top:10px" onclick="closeModal()">Close</button>`);
+}
 function sendBack(id){const n=prompt("What needs to change? The writer will see this note.");if(n===null)return;setStatus(id,"changes",{review_note:n});}
 function approve(id){setStatus(id,"approved",{});}
 function showModal(html){document.getElementById("modalbody").innerHTML=html;document.getElementById("modal").classList.remove("hidden");}
