@@ -106,6 +106,7 @@
     <button class="tab active" data-tab="overview">Overview</button>
     <button class="tab" data-tab="trends">Trends</button>
     <button class="tab" data-tab="leads">Leads</button>
+    <button class="tab" data-tab="ranks">Ranks</button>
     <button class="tab" data-tab="problems">Problems</button>
     <button class="tab" data-tab="merge">Merge</button>
     <button class="tab" data-tab="assignments">Assignments</button>
@@ -113,6 +114,7 @@
   <div id="overview"><div class="loading">Loading...</div></div>
   <div id="trends" class="hidden"><div class="loading">Loading...</div></div>
   <div id="leads" class="hidden"><div class="loading">Loading...</div></div>
+  <div id="ranks" class="hidden"><div class="loading">Loading...</div></div>
   <div id="problems" class="hidden"><div class="loading">Loading...</div></div>
   <div id="merge" class="hidden"><div class="loading">Loading...</div></div>
   <div id="assignments" class="hidden"><div class="loading">Loading...</div></div>
@@ -120,19 +122,57 @@
 <div id="modal" class="modal hidden"><div class="modalbox"><button class="modalx" onclick="closeModal()">&times;</button><div id="modalbody"></div></div></div>
 <script>
 const DASH="/.netlify/functions/get-dashboard",BRIEFS="/.netlify/functions/get-briefs",PROBLEMS="/.netlify/functions/get-problems",MERGE="/.netlify/functions/get-cannibalization",TRENDS="/.netlify/functions/get-trends",LEADS="/.netlify/functions/get-leads",UPDATE="/.netlify/functions/update-brief";
+const RANKS="/.netlify/functions/get-ranks",MANAGERANKS="/.netlify/functions/manage-ranks",TRACKRANKS="/.netlify/functions/track-ranks-background";
 const INTERVIEWQ="/.netlify/functions/interview-questions",GENDRAFT="/.netlify/functions/generate-draft-background",GETDRAFT="/.netlify/functions/get-draft";
 const REWRITE="/.netlify/functions/rewrite-page-background",GETREWRITE="/.netlify/functions/get-rewrite";
 const REVIEW="/.netlify/functions/review-submission-background",GETREVIEW="/.netlify/functions/get-review";
 const SERPBRIEF="/.netlify/functions/serp-brief-background",GETSERP="/.netlify/functions/get-serp-brief";
 const BUILDLINKS="/.netlify/functions/build-links-background",GETLINKS="/.netlify/functions/get-links";
 const BUILDSCHEMA="/.netlify/functions/build-schema-background",GETSCHEMA="/.netlify/functions/get-schema";
-const TABS=["overview","leads","trends","problems","merge","assignments"];
+const TABS=["overview","leads","ranks","trends","problems","merge","assignments"];
 const gate=document.getElementById("gate"),app=document.getElementById("app");
 let pass="",briefsData=[],interviewBrief=null,interviewQs=[],pollTimer=null,rewriteBrief=null,reviewBrief=null,serpBriefId=null,linksBriefId=null,schemaBriefId=null;
 const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const num=n=>Number(n||0).toLocaleString();
 const short=u=>{try{const x=new URL(u);return x.pathname||u;}catch(e){return u;}};
 function delta(cur,prev,lb){cur=Number(cur||0);prev=Number(prev||0);if(!prev)return '<div class="delta flat">no prior week yet</div>';const diff=cur-prev,pct=Math.round(100*diff/prev),good=lb?diff<0:diff>0,cls=diff===0?"flat":good?"up":"down",a=diff===0?"":diff>0?"\u25B2":"\u25BC";return `<div class="delta ${cls}">${a} ${Math.abs(pct)}% vs last week</div>`;}
+function rankSpark(history){
+  const pts=(history||[]).filter(h=>h.position!=null);
+  if(pts.length<2)return"";
+  const W=120,H=28,max=Math.max(...pts.map(p=>p.position)),min=Math.min(...pts.map(p=>p.position));
+  const span=Math.max(1,max-min),step=W/(pts.length-1);
+  const path=pts.map((p,i)=>`${i===0?"M":"L"}${(i*step).toFixed(1)},${(((p.position-min)/span)*(H-6)+3).toFixed(1)}`).join(" ");
+  return `<svg viewBox="0 0 ${W} ${H}" style="width:120px;height:28px"><path d="${path}" fill="none" stroke="var(--sky)" stroke-width="2"/></svg>`;
+}
+function renderRanks(d){
+  const host=document.getElementById("ranks");
+  const kws=(d&&d.keywords)||[];
+  const adder=`<div class="section"><h2>Money keyword rankings</h2><p class="note">Your exact Google position for the keywords that matter, checked daily. Lower is better.</p><div style="display:flex;gap:8px;flex-wrap:wrap"><input id="rankkw" placeholder="Add a keyword, e.g. how to remove a collection from credit report" style="flex:1;min-width:240px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;font-size:14px;font-family:inherit"/><button class="sbtn btnp" onclick="addRankKeyword()">Add</button><button class="sbtn" onclick="checkRanksNow()">Check now</button></div><div id="rankmsg" class="msub" style="margin-top:8px"></div></div>`;
+  if(!kws.length){host.innerHTML=adder+'<div class="empty">No keywords tracked yet. Add your buyer-intent keywords above, then click Check now.</div>';return;}
+  const rows=kws.map(k=>{
+    const cur=k.current,prev=k.previous;
+    const curPos=(cur&&cur.position!=null)?cur.position:null;
+    const posLabel=curPos!=null?`#${curPos}`:'<span style="color:var(--muted);font-size:14px">not in top 100</span>';
+    let delta="";
+    if(cur&&prev&&cur.position!=null&&prev.position!=null){const diff=prev.position-cur.position;if(diff!==0){const good=diff>0;delta=`<span class="${good?'up':'down'}" style="font-weight:600">${good?'\u25B2':'\u25BC'} ${Math.abs(diff)}</span>`;}}
+    const link=(cur&&cur.url)?`<a class="lnk" href="${esc(cur.url)}" target="_blank" rel="noopener">page</a>`:"";
+    return `<div class="card" style="display:flex;align-items:center;gap:14px;justify-content:space-between;flex-wrap:wrap"><div style="flex:1;min-width:200px"><div style="font-weight:600">${esc(k.keyword)}</div><div class="msub" style="margin-top:2px">${link}</div></div><div>${rankSpark(k.history)}</div><div style="text-align:right;min-width:90px"><div style="font-size:22px;font-weight:700">${posLabel}</div><div>${delta}</div></div><button class="sbtn btnno" onclick="removeRankKeyword('${esc(k.keyword).replace(/'/g,"\\'")}')">remove</button></div>`;
+  }).join("");
+  host.innerHTML=adder+rows;
+}
+async function addRankKeyword(){
+  const el=document.getElementById("rankkw");const kw=(el?el.value:"").trim();const msg=document.getElementById("rankmsg");
+  if(!kw){if(msg)msg.textContent="Type a keyword first.";return;}
+  if(msg)msg.textContent="Adding...";
+  try{await fetch(MANAGERANKS+"?pass="+encodeURIComponent(pass),{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({action:"add",keyword:kw})});const r=await fetchJSON(RANKS);renderRanks(r);const m2=document.getElementById("rankmsg");if(m2)m2.textContent="Added. Click Check now to get its current position.";}catch(e){if(msg)msg.textContent="Could not add.";}
+}
+async function removeRankKeyword(kw){
+  try{await fetch(MANAGERANKS+"?pass="+encodeURIComponent(pass),{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({action:"remove",keyword:kw})});const r=await fetchJSON(RANKS);renderRanks(r);}catch(e){}
+}
+function checkRanksNow(){
+  const msg=document.getElementById("rankmsg");if(msg)msg.textContent="Checking positions now. This runs in the background, refresh in about a minute.";
+  try{fetch(TRACKRANKS,{method:"POST"});}catch(e){}
+}
 function renderLeads(d){
   const host=document.getElementById("leads");
   const rows=d.leads||[];
@@ -363,7 +403,7 @@ async function rewritePage(id){
 function pollRewrite(){if(pollTimer)clearInterval(pollTimer);pollTimer=setInterval(async()=>{try{const r=await fetch(GETREWRITE+"?id="+encodeURIComponent(rewriteBrief)+"&pass="+encodeURIComponent(pass));const d=await r.json();if(d.rewrite_status==="ready"&&d.rewrite){clearInterval(pollTimer);pollTimer=null;showRewrite(d.rewrite);}else if(d.rewrite_status==="error"){clearInterval(pollTimer);pollTimer=null;showModal('<div class="empty">The rewrite failed. The page may block bots. Close and try again.</div>');}}catch(e){}},4000);}
 function showRewrite(text){showModal(`<h3>Rewritten page</h3><p class="msub">A stronger version of your live page. Review it, add the real ASAP touch and images, then publish.</p><textarea id="draftbox" rows="20" readonly>${esc(text)}</textarea><div style="display:flex;gap:8px;margin-top:12px"><button class="sbtn btnp" onclick="copyDraft()">Copy</button><button class="sbtn" onclick="closeModal()">Close</button></div>`);}
 async function fetchJSON(base){const r=await fetch(base+"?pass="+encodeURIComponent(pass));if(r.status===401)throw new Error("Wrong passcode");if(!r.ok)throw new Error("Load failed");return r.json();}
-async function loadAll(){const[dash,briefs,problems,merge,trends,leads]=await Promise.all([fetchJSON(DASH),fetchJSON(BRIEFS),fetchJSON(PROBLEMS),fetchJSON(MERGE),fetchJSON(TRENDS),fetchJSON(LEADS)]);renderOverview(dash);briefsData=briefs.briefs||[];drawBriefs();renderProblems(problems);renderMerge(merge);renderTrends(trends);renderLeads(leads);}
+async function loadAll(){const[dash,briefs,problems,merge,trends,leads,ranks]=await Promise.all([fetchJSON(DASH),fetchJSON(BRIEFS),fetchJSON(PROBLEMS),fetchJSON(MERGE),fetchJSON(TRENDS),fetchJSON(LEADS),fetchJSON(RANKS)]);renderOverview(dash);briefsData=briefs.briefs||[];drawBriefs();renderProblems(problems);renderMerge(merge);renderTrends(trends);renderLeads(leads);renderRanks(ranks);}
 async function enter(){pass=document.getElementById("pass").value.trim();const err=document.getElementById("err");err.textContent="";try{await loadAll();localStorage.setItem("asap_os_pass",pass);gate.classList.add("hidden");app.classList.remove("hidden");}catch(e){err.textContent=e.message;}}
 document.getElementById("enter").addEventListener("click",enter);
 document.getElementById("pass").addEventListener("keydown",e=>{if(e.key==="Enter")enter();});

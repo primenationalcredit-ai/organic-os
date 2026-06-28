@@ -5,7 +5,7 @@
 export const config = { schedule: "0 11 * * *" };
 
 const BASE = "https://asapwebsitetraffic.netlify.app/.netlify/functions";
-const TARGETS = ["sync-gsc", "backfill-gsc-background", "sync-ga4-background", "sync-ahrefs-background"];
+const TARGETS = ["sync-gsc", "backfill-gsc-background", "sync-ga4-background", "sync-ahrefs-background", "track-ranks-background"];
 
 export default async () => {
   const results = {};
