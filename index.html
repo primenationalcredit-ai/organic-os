@@ -122,9 +122,10 @@
 const DASH="/.netlify/functions/get-dashboard",BRIEFS="/.netlify/functions/get-briefs",PROBLEMS="/.netlify/functions/get-problems",MERGE="/.netlify/functions/get-cannibalization",TRENDS="/.netlify/functions/get-trends",LEADS="/.netlify/functions/get-leads",UPDATE="/.netlify/functions/update-brief";
 const INTERVIEWQ="/.netlify/functions/interview-questions",GENDRAFT="/.netlify/functions/generate-draft-background",GETDRAFT="/.netlify/functions/get-draft";
 const REWRITE="/.netlify/functions/rewrite-page-background",GETREWRITE="/.netlify/functions/get-rewrite";
+const REVIEW="/.netlify/functions/review-submission-background",GETREVIEW="/.netlify/functions/get-review";
 const TABS=["overview","leads","trends","problems","merge","assignments"];
 const gate=document.getElementById("gate"),app=document.getElementById("app");
-let pass="",briefsData=[],interviewBrief=null,interviewQs=[],pollTimer=null,rewriteBrief=null;
+let pass="",briefsData=[],interviewBrief=null,interviewQs=[],pollTimer=null,rewriteBrief=null,reviewBrief=null;
 const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const num=n=>Number(n||0).toLocaleString();
 const short=u=>{try{const x=new URL(u);return x.pathname||u;}catch(e){return u;}};
@@ -224,10 +225,11 @@ function liveStrip(b){
 }
 function controlsFor(b){
   const st=b.status||"open",iv=`<button class="sbtn btnai" onclick="openInterview('${b.id}')">Interview me</button>`;
-  if(st==="submitted")return `<div class="statusbar"><span class="pill review">Awaiting review</span>`+(b.submitted_url?`<a class="lnk" href="${esc(b.submitted_url)}" target="_blank" rel="noopener">view draft</a>`:"")+`<button class="sbtn btnok" onclick="approve('${b.id}')">Approve</button><button class="sbtn btnno" onclick="sendBack('${b.id}')">Send back</button></div>`;
+  if(st==="checking")return `<div class="statusbar"><span class="pill review">AI is checking the draft...</span></div>`;
+  if(st==="submitted"){const gl=(b.ai_review&&b.ai_review.passed)?`<div class="notebox" style="background:#ecfdf5;border-left-color:var(--emerald);color:#065f46"><b>AI greenlight:</b> ${esc(b.ai_review.summary||"Passed the editor check.")}</div>`:"";return gl+`<div class="statusbar"><span class="pill review">Awaiting your approval</span>`+(b.submitted_url?`<a class="lnk" href="${esc(b.submitted_url)}" target="_blank" rel="noopener">view draft</a>`:"")+`<button class="sbtn btnok" onclick="approve('${b.id}')">Approve</button><button class="sbtn btnno" onclick="sendBack('${b.id}')">Send back</button></div>`;}
   if(st==="approved")return `<div class="statusbar"><span class="pill approved">Approved</span>`+(b.submitted_url?`<a class="lnk" href="${esc(b.submitted_url)}" target="_blank" rel="noopener">view post</a>`:"")+`<button class="sbtn" onclick="setStatus('${b.id}','doing')">Reopen</button></div>`;
-  if(st==="changes")return (b.review_note?`<div class="notebox"><b>Changes requested:</b> ${esc(b.review_note)}</div>`:"")+`<div class="statusbar"><span class="pill changes">Changes requested</span>${iv}<button class="sbtn btnp" onclick="resubmit('${b.id}')">Re-submit</button></div>`;
-  if(st==="doing")return `<div class="statusbar"><span class="pill doing">In progress</span>${iv}<button class="sbtn btnp" onclick="submitForReview('${b.id}')">Submit for review</button></div>`;
+  if(st==="changes")return (b.review_note?`<div class="notebox"><b>Fix before it goes live:</b> ${esc(b.review_note)}</div>`:"")+`<div class="statusbar"><span class="pill changes">Changes needed</span>${iv}<button class="sbtn btnp" onclick="openSubmit('${b.id}')">Revise &amp; re-check</button></div>`;
+  if(st==="doing")return `<div class="statusbar"><span class="pill doing">In progress</span>${iv}<button class="sbtn btnp" onclick="openSubmit('${b.id}')">Submit for review</button></div>`;
   return `<div class="statusbar"><span class="pill todo">Not started</span>${iv}<button class="sbtn btnp" onclick="setStatus('${b.id}','doing')">Start writing</button></div>`;
 }
 function drawBriefs(){
@@ -240,8 +242,31 @@ function drawBriefs(){
   document.getElementById("assignments").innerHTML=bar+cards;
 }
 async function setStatus(id,status,extra){const b=briefsData.find(x=>x.id===id);if(b){b.status=status;if(extra){if("submitted_url" in extra)b.submitted_url=extra.submitted_url;if("review_note" in extra)b.review_note=extra.review_note;}}drawBriefs();const body=Object.assign({id,status},extra||{});try{await fetch(UPDATE+"?pass="+encodeURIComponent(pass),{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(body)});}catch(e){}}
-function submitForReview(id){const u=prompt("Paste the link to the finished blog (optional):")||"";setStatus(id,"submitted",{submitted_url:u});}
-function resubmit(id){const u=prompt("Paste the updated link (optional):")||"";setStatus(id,"submitted",{submitted_url:u});}
+function openSubmit(id){
+  reviewBrief=id;
+  showModal(`<h3>Submit for review</h3><p class="msub">Paste your finished draft. The AI editor checks it against the assignment and the compliance rules before it reaches Joe. If anything needs fixing, you will see it here first.</p><textarea id="subbox" rows="13" placeholder="Paste the full blog draft here..."></textarea><input id="suburl" placeholder="Link to the doc or live page (optional)" style="width:100%;margin-top:8px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;font-size:14px;font-family:inherit"/><div class="err" id="suberr" style="color:#dc2626;font-size:13px;min-height:16px;margin-top:6px"></div><button class="sbtn btnp" onclick="runReview('${id}')">Run AI check</button>`);
+}
+async function runReview(id){
+  const text=(document.getElementById("subbox")?document.getElementById("subbox").value:"").trim();
+  const u=(document.getElementById("suburl")?document.getElementById("suburl").value:"").trim();
+  if(text.length<150){const e=document.getElementById("suberr");if(e)e.textContent="Please paste the full draft (at least a paragraph) so the editor can check it.";return;}
+  showModal('<div class="loading">The AI editor is reviewing the draft against the assignment and compliance rules...<br>About a minute. Keep this window open.</div>');
+  try{
+    await fetch(UPDATE+"?pass="+encodeURIComponent(pass),{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({id,submission:text,submitted_url:u,ai_status:"checking",status:"checking"})});
+    fetch(REVIEW+"?id="+encodeURIComponent(id)+"&pass="+encodeURIComponent(pass),{method:"POST"});
+    pollReview();
+  }catch(e){showModal('<div class="empty">Could not start the check. Close and try again.</div>');}
+}
+function pollReview(){if(pollTimer)clearInterval(pollTimer);pollTimer=setInterval(async()=>{try{const r=await fetch(GETREVIEW+"?id="+encodeURIComponent(reviewBrief)+"&pass="+encodeURIComponent(pass));const d=await r.json();if(d.ai_status==="passed"||d.ai_status==="failed"){clearInterval(pollTimer);pollTimer=null;showReviewResult(d);}else if(d.ai_status==="error"){clearInterval(pollTimer);pollTimer=null;showModal('<div class="empty">The check failed to run. Close and try again.</div>');}}catch(e){}},4000);}
+function showReviewResult(d){
+  const v=d.ai_review||{};const li=a=>(a&&a.length)?('<ul style="margin:6px 0 0;padding-left:18px">'+a.map(x=>`<li style="margin-bottom:4px">${esc(x)}</li>`).join("")+'</ul>'):'';
+  if(d.ai_status==="passed"){
+    showModal(`<h3 style="color:var(--emerald)">AI greenlight &#10003;</h3><p class="msub">${esc(v.summary||"This is cleared to go live.")}</p>${v.strengths&&v.strengths.length?'<div style="font-size:13px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em">What works</div>'+li(v.strengths):''}<p class="msub" style="margin-top:14px">It is now in Joe's queue for final approval.</p><button class="sbtn btnp" onclick="closeAndReload()">Done</button>`);
+  }else{
+    showModal(`<h3 style="color:#dc2626">Fix these first</h3><p class="msub">It has not gone to Joe yet. Make these changes, then run the check again.</p>${v.compliance_issues&&v.compliance_issues.length?'<div style="font-size:13px;font-weight:700;color:#dc2626;text-transform:uppercase;letter-spacing:.04em">Compliance (must fix)</div>'+li(v.compliance_issues):''}${v.must_fix&&v.must_fix.length?'<div style="font-size:13px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-top:10px">Must fix</div>'+li(v.must_fix):''}${v.nice_to_have&&v.nice_to_have.length?'<div style="font-size:13px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-top:10px">Nice to have</div>'+li(v.nice_to_have):''}<button class="sbtn btnp" style="margin-top:14px" onclick="closeAndReload()">Got it</button>`);
+  }
+}
+function closeAndReload(){closeModal();loadAll();}
 function sendBack(id){const n=prompt("What needs to change? The writer will see this note.");if(n===null)return;setStatus(id,"changes",{review_note:n});}
 function approve(id){setStatus(id,"approved",{});}
 function showModal(html){document.getElementById("modalbody").innerHTML=html;document.getElementById("modal").classList.remove("hidden");}
