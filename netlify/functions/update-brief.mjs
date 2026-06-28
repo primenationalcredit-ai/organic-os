@@ -19,6 +19,7 @@ export default async (req) => {
     if(body.submission!==undefined) patch.submission=body.submission;
     if(body.ai_status!==undefined) patch.ai_status=body.ai_status;
     if(body.serp_status!==undefined) patch.serp_status=body.serp_status;
+    if(body.links_status!==undefined) patch.links_status=body.links_status;
     const { error }=await supabase.from("content_briefs").update(patch).eq("id",id);
     if(error) throw error;
     return new Response(JSON.stringify({ok:true}),{headers:{"content-type":"application/json"}});
